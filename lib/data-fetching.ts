@@ -1,7 +1,7 @@
-import { getLeaderboard as dbGetLeaderboard, getUserByTwitterHandle, getOrCreateSystemUser, getWalletsByUserId, getTokensForUserWallets, updateUser, addScoreHistory, recordProfileView, upsertToken } from './db';
+import { getLeaderboard as dbGetLeaderboard, getUserByTwitterHandle, getOrCreateSystemUser, getWalletsByUserId, getTokensForUserWallets, updateUser, addScoreHistory, recordProfileView, upsertToken, updateRanks } from './db';
 import { getTierInfo, DevTier, calculateDevScore, calculateTokenScore } from './scoring';
 import { getTokenMarketData, checkMigrationStatus } from './dexscreener';
-import { getTokensWithMigrationStatus } from './helius';
+import { getTokensCreatedByWalletFast } from './helius';
 import { PublicKey } from '@solana/web3.js';
 
 export interface LeaderboardEntry {
@@ -123,50 +123,60 @@ export async function getProfileData(handle: string, viewerIp?: string): Promise
     const wallets = await getWalletsByUserId(user.id);
     let tokens = await getTokensForUserWallets(user.id);
 
+    // Track if this is a fresh scan (skip slow API calls for first load)
+    let freshScan = false;
+
     // If new system user (no tokens yet), trigger initial wallet scan
     if (tokens.length === 0 && wallets.length > 0) {
       const primaryWallet = wallets.find(w => w.is_primary) || wallets[0];
 
-      // Scan wallet for tokens using Helius
-      const scanResult = await getTokensWithMigrationStatus(primaryWallet.address);
+      // Fast scan: just get tokens from DAS API (no slow transaction history lookups)
+      const scanResult = await getTokensCreatedByWalletFast(primaryWallet.address);
 
       if (scanResult.tokens.length > 0) {
-        // Upsert discovered tokens to DB
-        for (const tokenData of scanResult.tokens) {
-          const migrationInfo = scanResult.migrated.get(tokenData.mintAddress);
-
-          // Get market data for migrated tokens
-          let marketData = null;
-          if (migrationInfo) {
-            marketData = await getTokenMarketData(tokenData.mintAddress).catch(() => null);
-          }
-
-          await upsertToken({
-            mint_address: tokenData.mintAddress,
-            name: tokenData.name,
-            symbol: tokenData.symbol,
-            creator_wallet: primaryWallet.address,
-            user_id: user.id,
-            launch_date: marketData?.pairCreatedAt
-              ? new Date(marketData.pairCreatedAt).toISOString()
-              : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-            migrated: !!migrationInfo,
-            migrated_at: migrationInfo ? new Date(migrationInfo.firstSwapTimestamp * 1000).toISOString() : undefined,
-            current_market_cap: marketData?.marketCap,
-            ath_market_cap: marketData?.marketCap,
-            total_volume: marketData?.volume24h,
-            status: 'active',
-            score: migrationInfo ? 50 : 10,
-          });
-        }
+        freshScan = true;
+        // Batch upsert tokens quickly without individual market data calls
+        await Promise.all(
+          scanResult.tokens.map(async (tokenData) => {
+            const migrationInfo = scanResult.migrated.get(tokenData.mintAddress);
+            await upsertToken({
+              mint_address: tokenData.mintAddress,
+              name: tokenData.name,
+              symbol: tokenData.symbol,
+              creator_wallet: primaryWallet.address,
+              user_id: user.id,
+              launch_date: new Date().toISOString(),
+              migrated: !!migrationInfo,
+              migrated_at: migrationInfo ? new Date(migrationInfo.firstSwapTimestamp * 1000).toISOString() : undefined,
+              status: 'active',
+              score: migrationInfo ? 50 : 10,
+            });
+          })
+        );
 
         // Refresh tokens list from DB after scan
         tokens = await getTokensForUserWallets(user.id);
       }
     }
 
+    // Calculate token scores - skip slow API calls on fresh scans for faster load
     const tokenScores = await Promise.all(
       tokens.map(async (token) => {
+        // For fresh scans, use DB data only; for existing profiles, fetch live data
+        if (freshScan) {
+          return {
+            mint: token.mint_address,
+            name: token.name,
+            symbol: token.symbol,
+            launchDate: token.launch_date,
+            migrated: token.migrated,
+            marketCap: token.current_market_cap,
+            volume24h: null,
+            status: token.status,
+            score: token.score || (token.migrated ? 50 : 10),
+          };
+        }
+
         const marketData = await getTokenMarketData(token.mint_address).catch(() => null);
         const migrationStatus = await checkMigrationStatus(token.mint_address).catch(() => ({
           migrated: token.migrated,
@@ -212,6 +222,9 @@ export async function getProfileData(handle: string, viewerIp?: string): Promise
     // Update user's total score in DB
     await updateUser(user.id, { total_score: devScore.score });
     await addScoreHistory(user.id, devScore.score, devScore.breakdown).catch(() => {});
+
+    // Update all ranks (non-blocking)
+    updateRanks().catch(() => {});
 
     const tierInfo = getTierInfo(devScore.tier);
 

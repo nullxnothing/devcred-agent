@@ -1,0 +1,47 @@
+Testing efficient migration detection...
+Wallet: CFqsrQbvhb1Z3XKHVAZg6sovZzTg5NN9X9RnTf3D2BBZ
+Total time: 7.254s
+\nResults:
+  Total tokens: 3825
+  Migrated count: 20
+\nMigrated tokens:
+  - FEELIN ICY (ICY)
+    Swaps: 4 | First swap: 2026-01-27T18:43:16.000Z
+  - World Liberty Financial USD (USD1)
+    Swaps: 36 | First swap: 2026-01-27T17:23:39.000Z
+  - Wrapped SOL (SOL)
+    Swaps: 9 | First swap: 2026-01-27T17:23:39.000Z
+  - Decent White (White)
+    Swaps: 2 | First swap: 2026-01-27T18:32:10.000Z
+  - The Subway Hero (Hero)
+    Swaps: 2 | First swap: 2026-01-27T18:26:56.000Z
+  - Superagent (Superagent)
+    Swaps: 2 | First swap: 2026-01-27T18:17:00.000Z
+  - Alex Prettier (ALEX)
+    Swaps: 2 | First swap: 2026-01-27T18:10:52.000Z
+  - CINDERELLA (CINDERELLA)
+    Swaps: 3 | First swap: 2026-01-27T18:09:20.000Z
+  - Real World Asset (RWA)
+    Swaps: 2 | First swap: 2026-01-27T18:08:27.000Z
+  - Regencell Bioscience Holdings (RGC)
+    Swaps: 2 | First swap: 2026-01-27T18:07:18.000Z
+  - Regencell Bioscience Holdings (RGC)
+    Swaps: 2 | First swap: 2026-01-27T18:06:57.000Z
+  - Regencell Bioscience Holdings (RGC)
+    Swaps: 2 | First swap: 2026-01-27T18:06:44.000Z
+  - Solana House (SOLHOUSE)
+    Swaps: 2 | First swap: 2026-01-27T18:00:33.000Z
+  - ChatGPT Prism (PRISM)
+    Swaps: 2 | First swap: 2026-01-27T17:50:39.000Z
+  - Helix 02 (02)
+    Swaps: 2 | First swap: 2026-01-27T17:48:52.000Z
+  - Political Memecoin (POLITICAL)
+    Swaps: 4 | First swap: 2026-01-27T17:46:08.000Z
+  - ALOH HAS 100% LOL (GROKSWARMS)
+    Swaps: 1 | First swap: 2026-01-27T17:42:38.000Z
+  - grok workspace (workspace)
+    Swaps: 2 | First swap: 2026-01-27T17:41:34.000Z
+  - Rick troll (RickTroll)
+    Swaps: 2 | First swap: 2026-01-27T17:26:29.000Z
+  - Freedom (Freedom)
+    Swaps: 2 | First swap: 2026-01-27T17:23:39.000Z

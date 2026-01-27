@@ -1,0 +1,161 @@
+{
+  "migrated": true,
+  "migrationType": "pumpswap",
+  "pool": {
+    "chainId": "solana",
+    "dexId": "pumpswap",
+    "url": "https://dexscreener.com/solana/dpi8gbvfskwvoovx58fhdtakeebqaxtn9gdw2bvhpnr",
+    "pairAddress": "DPi8gBvFSKWvooVX58FhdtAkEEBqaxTn9gdw2bVHPNR",
+    "baseToken": {
+      "address": "DNEnzHLuJ1xW6V6itr5E4UVkmswJco6BjwNFBAyfpump",
+      "name": "Decent White",
+      "symbol": "White"
+    },
+    "quoteToken": {
+      "address": "So11111111111111111111111111111111111111112",
+      "name": "Wrapped SOL",
+      "symbol": "SOL"
+    },
+    "priceNative": "0.000002537",
+    "priceUsd": "0.0003192",
+    "txns": {
+      "m5": {
+        "buys": 156,
+        "sells": 121
+      },
+      "h1": {
+        "buys": 15707,
+        "sells": 11562
+      },
+      "h6": {
+        "buys": 15707,
+        "sells": 11562
+      },
+      "h24": {
+        "buys": 15707,
+        "sells": 11562
+      }
+    },
+    "volume": {
+      "h24": 2315421.15,
+      "h6": 2315421.15,
+      "h1": 2315421.15,
+      "m5": 20948.79
+    },
+    "priceChange": {
+      "m5": -5.6,
+      "h1": 523,
+      "h6": 523,
+      "h24": 523
+    },
+    "liquidity": {
+      "usd": 58462.94,
+      "base": 91564004,
+      "quote": 232.3631
+    },
+    "fdv": 319223,
+    "marketCap": 319223,
+    "pairCreatedAt": 1769538761000,
+    "info": {
+      "imageUrl": "https://cdn.dexscreener.com/cms/images/3604dcc346a6faccc85529ca8a88f5af63261351a750c41a97e3baff3b037f2c?width=800&height=800&quality=90",
+      "header": "https://cdn.dexscreener.com/cms/images/34efaf3d0d194600d0ac45c20b3130dfeab7655ad4e4be8dc9d4e1324f978d88?width=1500&height=500&quality=90",
+      "openGraph": "https://cdn.dexscreener.com/token-images/og/solana/DNEnzHLuJ1xW6V6itr5E4UVkmswJco6BjwNFBAyfpump?timestamp=1769541600000",
+      "websites": [],
+      "socials": [
+        {
+          "url": "https://x.com/i/communities/1978267374299074995",
+          "type": "twitter"
+        }
+      ]
+    }
+  },
+  "liquidityUsd": 58462.94,
+  "migratedAt": "2026-01-27T18:32:41.000Z"
+}
+{
+  "mintAddress": "DNEnzHLuJ1xW6V6itr5E4UVkmswJco6BjwNFBAyfpump",
+  "name": "Decent White",
+  "symbol": "White",
+  "priceUsd": 0.0003041,
+  "priceChange24h": 493,
+  "volume24h": 2316289.18,
+  "liquidity": 57082.37,
+  "marketCap": 304104,
+  "fdv": 304104,
+  "totalBuys24h": 15710,
+  "totalSells24h": 11566,
+  "pairAddress": "DPi8gBvFSKWvooVX58FhdtAkEEBqaxTn9gdw2bVHPNR",
+  "dexId": "pumpswap",
+  "pairCreatedAt": "2026-01-27T18:32:41.000Z",
+  "url": "https://dexscreener.com/solana/dpi8gbvfskwvoovx58fhdtakeebqaxtn9gdw2bvhpnr",
+  "allPairs": [
+    {
+      "chainId": "solana",
+      "dexId": "pumpswap",
+      "url": "https://dexscreener.com/solana/dpi8gbvfskwvoovx58fhdtakeebqaxtn9gdw2bvhpnr",
+      "pairAddress": "DPi8gBvFSKWvooVX58FhdtAkEEBqaxTn9gdw2bVHPNR",
+      "baseToken": {
+        "address": "DNEnzHLuJ1xW6V6itr5E4UVkmswJco6BjwNFBAyfpump",
+        "name": "Decent White",
+        "symbol": "White"
+      },
+      "quoteToken": {
+        "address": "So11111111111111111111111111111111111111112",
+        "name": "Wrapped SOL",
+        "symbol": "SOL"
+      },
+      "priceNative": "0.000002415",
+      "priceUsd": "0.0003041",
+      "txns": {
+        "m5": {
+          "buys": 159,
+          "sells": 125
+        },
+        "h1": {
+          "buys": 15710,
+          "sells": 11566
+        },
+        "h6": {
+          "buys": 15710,
+          "sells": 11566
+        },
+        "h24": {
+          "buys": 15710,
+          "sells": 11566
+        }
+      },
+      "volume": {
+        "h24": 2316289.18,
+        "h6": 2316289.18,
+        "h1": 2316289.18,
+        "m5": 21816.82
+      },
+      "priceChange": {
+        "m5": -10.07,
+        "h1": 493,
+        "h6": 493,
+        "h24": 493
+      },
+      "liquidity": {
+        "usd": 57082.37,
+        "base": 93369345,
+        "quote": 227.8842
+      },
+      "fdv": 304104,
+      "marketCap": 304104,
+      "pairCreatedAt": 1769538761000,
+      "info": {
+        "imageUrl": "https://cdn.dexscreener.com/cms/images/3604dcc346a6faccc85529ca8a88f5af63261351a750c41a97e3baff3b037f2c?width=800&height=800&quality=90",
+        "header": "https://cdn.dexscreener.com/cms/images/34efaf3d0d194600d0ac45c20b3130dfeab7655ad4e4be8dc9d4e1324f978d88?width=1500&height=500&quality=90",
+        "openGraph": "https://cdn.dexscreener.com/token-images/og/solana/DNEnzHLuJ1xW6V6itr5E4UVkmswJco6BjwNFBAyfpump?timestamp=1769541600000",
+        "websites": [],
+        "socials": [
+          {
+            "url": "https://x.com/i/communities/1978267374299074995",
+            "type": "twitter"
+          }
+        ]
+      }
+    }
+  ]
+}
