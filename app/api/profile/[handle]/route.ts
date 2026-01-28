@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { 
-  getUserByTwitterHandle, 
-  getWalletsByUserId, 
-  getTokensForUserWallets, 
+import {
+  getUserByTwitterHandle,
+  getWalletsByUserId,
+  getTokensForUserWallets,
   recordProfileView,
   getOrCreateSystemUser,
   upsertToken,
@@ -10,9 +10,8 @@ import {
   updateUser,
   updateUserRank
 } from '@/lib/db';
-import { calculateTokenScore, calculateDevScore, getTierInfo } from '@/lib/scoring';
-import { getTokenMarketData, checkMigrationStatus } from '@/lib/dexscreener';
-import { getTokensWithMigrationStatus } from '@/lib/helius';
+import { calculateDevScore, getTierInfo } from '@/lib/scoring';
+import { scanWalletQuick, MAX_AUTO_SCAN_TOKENS } from '@/lib/wallet-scan';
 import { PublicKey } from '@solana/web3.js';
 
 export async function GET(
@@ -49,90 +48,66 @@ export async function GET(
     const wallets = await getWalletsByUserId(user.id);
     let tokens = await getTokensForUserWallets(user.id);
 
-    // If new system user (no tokens yet), trigger initial scan
+    // Track scan limits across all wallets
+    let totalTokensFound = 0;
+    let tokensLimited = false;
+
+    // If no tokens yet, trigger fast scan for all wallets
     if (tokens.length === 0 && wallets.length > 0) {
-      const primaryWallet = wallets.find(w => w.is_primary) || wallets[0];
-      
-      // Trigger optimized scan
-      const scanResult = await getTokensWithMigrationStatus(primaryWallet.address);
-      
-      if (scanResult.tokens.length > 0) {
-        // Upsert tokens to DB
-        for (const tokenData of scanResult.tokens) {
-          const migrationInfo = scanResult.migrated.get(tokenData.mintAddress);
-          
-          // Get market data for migrated tokens
-          let marketData = null;
-          if (migrationInfo) {
-            marketData = await getTokenMarketData(tokenData.mintAddress).catch(() => null);
+      for (const wallet of wallets) {
+        try {
+          // Use optimized batch scan
+          const scanResult = await scanWalletQuick(wallet.address);
+          totalTokensFound += scanResult.totalTokensFound;
+          if (scanResult.tokensLimited) tokensLimited = true;
+
+          // Save tokens to DB
+          for (const token of scanResult.tokensCreated) {
+            await upsertToken({
+              mint_address: token.mintAddress,
+              name: token.name,
+              symbol: token.symbol,
+              creator_wallet: wallet.address,
+              user_id: user.id,
+              launch_date: new Date(token.launchedAt * 1000).toISOString(),
+              migrated: token.migrated,
+              migrated_at: token.migrated ? new Date().toISOString() : null,
+              current_market_cap: token.marketCap ? Math.round(token.marketCap) : null,
+              ath_market_cap: token.marketCap ? Math.round(token.marketCap) : null,
+              total_volume: null,
+              status: token.isRugged ? 'rug' : 'active',
+              score: token.score.total,
+              metadata: {
+                holders: token.currentHolders,
+                dev_holding_percent: token.devHoldingPercent,
+              },
+            });
           }
-
-          const migrationStatus = {
-            migrated: !!migrationInfo,
-            migrationType: migrationInfo ? 'DEX' : null,
-            pool: null,
-            liquidityUsd: marketData?.liquidity || 0,
-            migratedAt: migrationInfo ? new Date(migrationInfo.firstSwapTimestamp * 1000).toISOString() : null
-          };
-
-          await upsertToken({
-            mint_address: tokenData.mintAddress,
-            name: tokenData.name,
-            symbol: tokenData.symbol,
-            creator_wallet: primaryWallet.address,
-            user_id: user.id,
-            launch_date: marketData?.pairCreatedAt 
-              ? new Date(marketData.pairCreatedAt).toISOString() 
-              : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-            migrated: migrationStatus.migrated,
-            migrated_at: migrationStatus.migratedAt,
-            current_market_cap: marketData?.marketCap,
-            ath_market_cap: marketData?.marketCap, // Use current as ATH initially
-            total_volume: marketData?.volume24h,
-            status: 'active',
-            score: migrationInfo ? 50 : 10, // Basic score
-          });
+        } catch (walletError) {
+          console.error(`Error scanning wallet ${wallet.address}:`, walletError);
         }
-        
-        // Refresh tokens list from DB after scan
-        tokens = await getTokensForUserWallets(user.id);
       }
+
+      // Refresh tokens list from DB after scan
+      tokens = await getTokensForUserWallets(user.id);
     }
 
-    const tokenScores = await Promise.all(
-      tokens.map(async (token) => {
-        const marketData = await getTokenMarketData(token.mint_address).catch(() => null);
-        const migrationStatus = await checkMigrationStatus(token.mint_address).catch(() => ({ 
-          migrated: token.migrated, 
-          migrationType: null, 
-          pool: null, 
-          liquidityUsd: 0, 
-          migratedAt: token.migrated_at ? new Date(token.migrated_at) : null 
-        }));
-
-        const scoreResult = await calculateTokenScore({
-          mintAddress: token.mint_address,
-          creatorWallet: token.creator_wallet,
-          launchDate: new Date(token.launch_date),
-          isRugged: token.status === 'rug',
-          marketData,
-          migrationStatus,
-        });
-
-        return {
-          mint: token.mint_address,
-          name: token.name,
-          symbol: token.symbol,
-          launchDate: token.launch_date,
-          migrated: migrationStatus.migrated,
-          marketCap: marketData?.marketCap || token.current_market_cap,
-          volume24h: marketData?.volume24h,
-          status: token.status,
-          score: scoreResult.score,
-          breakdown: scoreResult.breakdown,
-        };
-      })
-    );
+    // Map DB tokens to response format (use stored scores, no extra API calls)
+    const tokenScores = tokens.map((token) => {
+      const metadata = token.metadata as { score_breakdown?: object } | null;
+      return {
+        mint: token.mint_address,
+        name: token.name,
+        symbol: token.symbol,
+        launchDate: token.launch_date,
+        migrated: token.migrated,
+        marketCap: token.current_market_cap,
+        volume24h: token.total_volume,
+        status: token.status,
+        score: token.score || 0,
+        breakdown: metadata?.score_breakdown || {},
+      };
+    });
 
     const devScore = calculateDevScore({
       tokens: tokenScores.map((t) => ({
@@ -184,6 +159,9 @@ export async function GET(
         totalTokens: tokens.length,
         migratedTokens: devScore.breakdown.migrationCount,
         avgTokenScore: devScore.breakdown.averageTokenScore,
+        totalTokensFound: totalTokensFound || tokens.length,
+        tokensLimited,
+        maxAutoScanTokens: MAX_AUTO_SCAN_TOKENS,
       },
     });
   } catch (error) {
