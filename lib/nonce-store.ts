@@ -1,7 +1,11 @@
 /**
- * Shared nonce store for wallet verification
- * In production, replace with Redis or database storage
+ * Database-backed nonce store for wallet verification
+ * Works across multiple server instances (unlike in-memory storage)
  */
+
+import { pool } from './db';
+
+const NONCE_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
 
 interface NonceData {
   nonce: string;
@@ -9,38 +13,87 @@ interface NonceData {
   expiresAt: number;
 }
 
-// In-memory store
-const store = new Map<string, NonceData>();
+/**
+ * Store a nonce in the database (requires userId - for adding secondary wallets)
+ */
+export async function setNonce(walletAddress: string, userId: string, nonce: string): Promise<void> {
+  const expiresAt = new Date(Date.now() + NONCE_EXPIRY_MS);
 
-const NONCE_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
-
-export function setNonce(walletAddress: string, userId: string, nonce: string): void {
-  store.set(walletAddress, {
-    nonce,
-    userId,
-    expiresAt: Date.now() + NONCE_EXPIRY_MS,
-  });
+  await pool.query(
+    `INSERT INTO dk_wallet_nonces (wallet_address, user_id, nonce, expires_at)
+     VALUES ($1, $2, $3, $4)
+     ON CONFLICT (wallet_address) DO UPDATE SET
+       user_id = EXCLUDED.user_id,
+       nonce = EXCLUDED.nonce,
+       expires_at = EXCLUDED.expires_at`,
+    [walletAddress, userId, nonce, expiresAt]
+  );
 }
 
-export function getNonce(walletAddress: string): NonceData | undefined {
-  return store.get(walletAddress);
+/**
+ * Store a nonce for public wallet authentication (no userId required)
+ * Used for initial login/signup with wallet
+ */
+export async function setNoncePublic(walletAddress: string, nonce: string): Promise<void> {
+  const expiresAt = new Date(Date.now() + NONCE_EXPIRY_MS);
+
+  await pool.query(
+    `INSERT INTO dk_wallet_nonces (wallet_address, user_id, nonce, expires_at)
+     VALUES ($1, NULL, $2, $3)
+     ON CONFLICT (wallet_address) DO UPDATE SET
+       user_id = NULL,
+       nonce = EXCLUDED.nonce,
+       expires_at = EXCLUDED.expires_at`,
+    [walletAddress, nonce, expiresAt]
+  );
 }
 
-export function deleteNonce(walletAddress: string): void {
-  store.delete(walletAddress);
-}
+/**
+ * Get a nonce from the database
+ */
+export async function getNonce(walletAddress: string): Promise<NonceData | undefined> {
+  const result = await pool.query(
+    `SELECT nonce, user_id, expires_at FROM dk_wallet_nonces WHERE wallet_address = $1`,
+    [walletAddress]
+  );
 
-export function cleanupExpiredNonces(): void {
-  const now = Date.now();
-  for (const [key, value] of store.entries()) {
-    if (value.expiresAt < now) {
-      store.delete(key);
-    }
+  if (result.rows.length === 0) {
+    return undefined;
   }
+
+  const row = result.rows[0];
+  return {
+    nonce: row.nonce,
+    userId: row.user_id,
+    expiresAt: new Date(row.expires_at).getTime(),
+  };
 }
 
+/**
+ * Delete a nonce from the database
+ */
+export async function deleteNonce(walletAddress: string): Promise<void> {
+  await pool.query(
+    `DELETE FROM dk_wallet_nonces WHERE wallet_address = $1`,
+    [walletAddress]
+  );
+}
+
+/**
+ * Cleanup expired nonces (call periodically or via cron)
+ */
+export async function cleanupExpiredNonces(): Promise<number> {
+  const result = await pool.query(
+    `DELETE FROM dk_wallet_nonces WHERE expires_at < NOW()`
+  );
+  return result.rowCount ?? 0;
+}
+
+/**
+ * Create the sign message for wallet verification
+ */
 export function createSignMessage(walletAddress: string, nonce: string): string {
-  return `DevKarma Wallet Verification
+  return `DevCred Wallet Verification
 
 Sign this message to verify you own this wallet.
 

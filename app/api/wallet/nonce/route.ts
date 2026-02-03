@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { randomBytes } from 'crypto';
-import { setNonce, cleanupExpiredNonces, createSignMessage, getNonce } from '@/lib/nonce-store';
+import { setNonce, cleanupExpiredNonces, createSignMessage } from '@/lib/nonce-store';
+import { checkRateLimit, getRateLimitIdentifier, rateLimitHeaders, RATE_LIMIT_CONFIGS } from '@/lib/api-rate-limiter';
 
 const NONCE_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -14,6 +15,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'Unauthorized. Please sign in with Twitter first.' },
         { status: 401 }
+      );
+    }
+
+    // Rate limiting
+    const rateLimitId = getRateLimitIdentifier('wallet-nonce', session.user.id);
+    const rateLimit = checkRateLimit(rateLimitId, RATE_LIMIT_CONFIGS.walletNonce);
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { error: 'Too many nonce requests. Please wait before trying again.' },
+        { status: 429, headers: rateLimitHeaders(rateLimit) }
       );
     }
 
@@ -35,15 +46,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Clean up old nonces
-    cleanupExpiredNonces();
+    // Clean up old nonces (non-blocking)
+    cleanupExpiredNonces().catch(() => {});
 
     // Generate unique nonce
     const nonce = randomBytes(32).toString('hex');
     const expiresAt = Date.now() + NONCE_EXPIRY_MS;
 
-    // Store nonce with user association
-    setNonce(walletAddress, session.user.id, nonce);
+    // Store nonce with user association (database-backed for multi-instance support)
+    await setNonce(walletAddress, session.user.id, nonce);
 
     // Create message for signing
     const message = createSignMessage(walletAddress, nonce);

@@ -14,9 +14,10 @@ export async function GET(request: NextRequest) {
     const results: {
       users: Array<{
         id: string;
-        twitterHandle: string;
-        twitterName: string;
+        twitterHandle: string | null;
+        twitterName: string | null;
         avatarUrl: string | null;
+        primaryWallet?: string | null;
         score: number;
         rank: number | null;
       }>;

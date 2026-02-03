@@ -1,3 +1,0 @@
-Total tokens: 3825
-Checking first 100 for migration (with rate limiting)...
-\nMIGRATED TOKENS FOUND: 0

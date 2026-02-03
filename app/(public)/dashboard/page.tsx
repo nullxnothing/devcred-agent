@@ -1,61 +1,82 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 
+interface User {
+  walletAddress: string;
+  twitterHandle: string | null;
+}
+
 export default function DashboardPage() {
-  const { data: session, status } = useSession();
   const router = useRouter();
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    if (status === 'loading') return;
+    async function loadUser() {
+      try {
+        const response = await fetch('/api/auth/me');
+        const data = await response.json();
 
-    if (status === 'unauthenticated') {
-      router.replace('/login');
-      return;
-    }
+        if (!data.user) {
+          router.replace('/login');
+          return;
+        }
 
-    if (status === 'authenticated' && session?.user) {
-      const handle = session.user.twitterHandle;
-      if (handle && handle.trim() !== '') {
-        router.replace(`/profile/${handle}`);
-      } else {
-        // Handle is missing - show error state
+        const user = data.user as User;
+
+        // Redirect to profile - prefer Twitter handle, fallback to wallet address
+        if (user.twitterHandle && user.twitterHandle.trim() !== '') {
+          router.replace(`/profile/${user.twitterHandle}`);
+        } else if (user.walletAddress) {
+          router.replace(`/profile/${user.walletAddress}`);
+        } else {
+          setError(true);
+        }
+      } catch (err) {
+        console.error('Error loading user:', err);
         setError(true);
+      } finally {
+        setLoading(false);
       }
     }
-  }, [session, status, router]);
+
+    loadUser();
+  }, [router]);
 
   if (error) {
     return (
       <div className="min-h-[80vh] flex flex-col items-center justify-center p-6">
         <div className="flex flex-col items-center gap-4 max-w-md text-center">
           <AlertCircle className="w-12 h-12 text-red-500" />
-          <h2 className="text-xl font-bold text-dark">Profile Setup Required</h2>
+          <h2 className="text-xl font-bold text-dark">Profile Error</h2>
           <p className="text-dark/60">
-            We couldn&apos;t retrieve your Twitter handle. Please sign out and sign in again.
+            We couldn&apos;t load your profile. Please try logging in again.
           </p>
           <Button
-            onClick={() => signOut({ callbackUrl: '/login' })}
+            onClick={() => router.push('/login')}
             variant="accent"
           >
-            Sign Out & Try Again
+            Return to Login
           </Button>
         </div>
       </div>
     );
   }
 
-  return (
-    <div className="min-h-[80vh] flex flex-col items-center justify-center p-6">
-      <div className="flex flex-col items-center gap-4">
-        <Loader2 className="w-12 h-12 animate-spin text-accent" />
-        <p className="text-lg font-medium text-dark/60">Loading your profile...</p>
+  if (loading) {
+    return (
+      <div className="min-h-[80vh] flex flex-col items-center justify-center p-6">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-12 h-12 animate-spin text-accent" />
+          <p className="text-lg font-medium text-dark/60">Loading your profile...</p>
+        </div>
       </div>
-    </div>
-  );
+    );
+  }
+
+  return null;
 }

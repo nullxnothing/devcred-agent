@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, X, User, Coins, Wallet, Loader2 } from 'lucide-react';
+import { getDevScoreColor } from '@/lib/score-colors';
 
 interface SearchResult {
   users: Array<{
@@ -160,7 +161,7 @@ export function SearchBar() {
                       onClick={() => handleSelect('user', user.twitterHandle)}
                       className="w-full px-4 py-3 flex items-center gap-3 hover:bg-cream transition-colors text-left"
                     >
-                      <div className="w-10 h-10 bg-gray-200 border border-dark overflow-hidden flex-shrink-0">
+                      <div className="w-10 h-10 bg-gray-200 border border-dark overflow-hidden shrink-0">
                         {user.avatarUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img src={user.avatarUrl} alt="" className="w-full h-full object-cover" />
@@ -173,7 +174,9 @@ export function SearchBar() {
                         <div className="text-sm text-dark/50 truncate">@{user.twitterHandle}</div>
                       </div>
                       <div className="text-right">
-                        <div className="font-bold font-display-mock">{user.score}</div>
+                        <div className={`font-bold font-display-mock ${getDevScoreColor(user.score).textClass}`}>
+                          {user.score}
+                        </div>
                         {user.rank && (
                           <div className="text-xs text-dark/50">#{user.rank}</div>
                         )}
@@ -193,7 +196,7 @@ export function SearchBar() {
                     onClick={() => handleSelect('wallet', results.wallet!.address)}
                     className="w-full px-4 py-3 flex items-center gap-3 hover:bg-cream transition-colors text-left"
                   >
-                    <div className="w-10 h-10 bg-accent/20 border border-dark flex items-center justify-center flex-shrink-0">
+                    <div className="w-10 h-10 bg-accent/20 border border-dark flex items-center justify-center shrink-0">
                       <Wallet size={20} />
                     </div>
                     <div className="flex-1 min-w-0">
@@ -216,7 +219,7 @@ export function SearchBar() {
                     onClick={() => handleSelect('token', results.token!.creatorWallet)}
                     className="w-full px-4 py-3 flex items-center gap-3 hover:bg-cream transition-colors text-left"
                   >
-                    <div className="w-10 h-10 bg-green-100 border border-dark flex items-center justify-center flex-shrink-0">
+                    <div className="w-10 h-10 bg-green-100 border border-dark flex items-center justify-center shrink-0">
                       <Coins size={20} />
                     </div>
                     <div className="flex-1 min-w-0">

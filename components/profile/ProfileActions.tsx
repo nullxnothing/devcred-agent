@@ -95,7 +95,7 @@ export function ConnectWalletButton({ profileUserId }: ConnectWalletButtonProps)
     return (
       <button
         onClick={() => router.push('/login')}
-        className="mt-4 text-accent font-bold underline hover:text-dark transition-colors"
+        className="mt-4 text-accent font-bold underline hover:text-accent/80 transition-colors"
       >
         Sign in to connect a wallet
       </button>
@@ -110,7 +110,7 @@ export function ConnectWalletButton({ profileUserId }: ConnectWalletButtonProps)
     <>
       <button
         onClick={() => setShowWalletConnect(true)}
-        className="mt-4 text-accent font-bold underline hover:text-dark transition-colors"
+        className="mt-4 text-accent font-bold underline hover:text-accent/80 transition-colors"
       >
         Connect a wallet to scan
       </button>

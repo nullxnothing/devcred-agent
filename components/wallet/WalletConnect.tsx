@@ -39,7 +39,6 @@ export function WalletConnect({ onVerificationComplete, className = '' }: Wallet
     try {
       const walletAddress = publicKey.toBase58();
 
-      // Step 1: Request nonce from server
       const nonceResponse = await fetch('/api/wallet/nonce', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -53,14 +52,12 @@ export function WalletConnect({ onVerificationComplete, className = '' }: Wallet
 
       const { message } = await nonceResponse.json();
 
-      // Step 2: Sign the message with wallet
       const messageBytes = new TextEncoder().encode(message);
       const signatureBytes = await signMessage(messageBytes);
       const signature = bs58.encode(signatureBytes);
 
       setStatus('verifying');
 
-      // Step 3: Send signature to server for verification
       const verifyResponse = await fetch('/api/wallet/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -79,7 +76,6 @@ export function WalletConnect({ onVerificationComplete, className = '' }: Wallet
     } catch (err) {
       setStatus('error');
       if (err instanceof Error) {
-        // Handle user rejection
         if (err.message.includes('User rejected')) {
           setError('Signature request was rejected. Please try again.');
         } else {
@@ -98,10 +94,9 @@ export function WalletConnect({ onVerificationComplete, className = '' }: Wallet
     setError(null);
   }, [disconnect]);
 
-  // Not signed in with Twitter
   if (!session?.user) {
     return (
-      <div className={`p-6 border-2 border-dark bg-cream ${className}`}>
+      <div className={`p-6 border-2 border-dark/30 bg-white ${className}`}>
         <div className="flex items-center gap-3 text-dark/60">
           <AlertCircle size={20} />
           <span className="text-sm font-medium">Sign in with Twitter to verify your wallet</span>
@@ -110,13 +105,12 @@ export function WalletConnect({ onVerificationComplete, className = '' }: Wallet
     );
   }
 
-  // Wallet not connected
   if (!connected) {
     return (
-      <div className={`p-6 border-2 border-dark bg-cream ${className}`}>
+      <div className={`p-6 border-2 border-dark/30 bg-white ${className}`}>
         <button
           onClick={handleConnect}
-          className="flex items-center gap-3 w-full justify-center py-3 px-6 bg-dark text-cream font-bold uppercase tracking-wider hover:bg-accent hover:text-dark transition-colors"
+          className="flex items-center gap-3 w-full justify-center py-3 px-6 bg-accent text-cream font-bold uppercase tracking-wider hover:bg-accent/90 transition-colors"
         >
           <Wallet size={20} />
           Connect Wallet
@@ -128,14 +122,13 @@ export function WalletConnect({ onVerificationComplete, className = '' }: Wallet
     );
   }
 
-  // Wallet connected but not verified
   if (status !== 'success' && !verifiedAddress) {
     return (
-      <div className={`p-6 border-2 border-dark bg-cream ${className}`}>
+      <div className={`p-6 border-2 border-dark/30 bg-white ${className}`}>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-green-500"></div>
-            <span className="text-sm font-mono truncate max-w-[200px]">
+            <span className="text-sm font-mono truncate max-w-[200px] text-dark">
               {publicKey?.toBase58()}
             </span>
           </div>
@@ -148,7 +141,7 @@ export function WalletConnect({ onVerificationComplete, className = '' }: Wallet
         </div>
 
         {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm">
+          <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
             {error}
           </div>
         )}
@@ -156,7 +149,7 @@ export function WalletConnect({ onVerificationComplete, className = '' }: Wallet
         <button
           onClick={handleVerify}
           disabled={status === 'signing' || status === 'verifying'}
-          className="flex items-center gap-3 w-full justify-center py-3 px-6 bg-accent text-dark font-bold uppercase tracking-wider hover:bg-dark hover:text-cream transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex items-center gap-3 w-full justify-center py-3 px-6 bg-accent text-cream font-bold uppercase tracking-wider hover:bg-accent/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {status === 'signing' && (
             <>
@@ -185,19 +178,18 @@ export function WalletConnect({ onVerificationComplete, className = '' }: Wallet
     );
   }
 
-  // Wallet verified
   return (
-    <div className={`p-6 border-2 border-green-600 bg-green-50 ${className}`}>
+    <div className={`p-6 border-2 border-green-500/50 bg-green-500/10 ${className}`}>
       <div className="flex items-center gap-3 mb-2">
-        <CheckCircle size={24} className="text-green-600" />
-        <span className="font-bold text-green-800">Wallet Verified</span>
+        <CheckCircle size={24} className="text-green-400" />
+        <span className="font-bold text-green-400">Wallet Verified</span>
       </div>
-      <div className="font-mono text-sm text-green-700 truncate">
+      <div className="font-mono text-sm text-green-300 truncate">
         {verifiedAddress || publicKey?.toBase58()}
       </div>
       <button
         onClick={handleDisconnect}
-        className="mt-4 text-xs text-green-700/60 hover:text-green-700 underline"
+        className="mt-4 text-xs text-green-400/60 hover:text-green-400 underline"
       >
         Disconnect & Remove
       </button>

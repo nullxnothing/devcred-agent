@@ -12,40 +12,46 @@ export interface Database {
       users: {
         Row: {
           id: string;
-          twitter_id: string;
-          twitter_handle: string;
-          twitter_name: string;
+          twitter_id: string | null;
+          twitter_handle: string | null;
+          twitter_name: string | null;
           avatar_url: string | null;
           bio: string | null;
           total_score: number;
           rank: number | null;
+          tier: string | null;
           is_verified: boolean;
+          primary_wallet: string | null;
+          pumpfun_username: string | null;
           created_at: string;
           updated_at: string;
         };
         Insert: {
           id?: string;
-          twitter_id: string;
-          twitter_handle: string;
-          twitter_name: string;
+          twitter_id?: string | null;
+          twitter_handle?: string | null;
+          twitter_name?: string | null;
           avatar_url?: string | null;
           bio?: string | null;
           total_score?: number;
           rank?: number | null;
           is_verified?: boolean;
+          primary_wallet?: string | null;
           created_at?: string;
           updated_at?: string;
         };
         Update: {
           id?: string;
-          twitter_id?: string;
-          twitter_handle?: string;
-          twitter_name?: string;
+          twitter_id?: string | null;
+          twitter_handle?: string | null;
+          twitter_name?: string | null;
           avatar_url?: string | null;
           bio?: string | null;
           total_score?: number;
           rank?: number | null;
           is_verified?: boolean;
+          primary_wallet?: string | null;
+          pumpfun_username?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -99,6 +105,12 @@ export interface Database {
           metadata: Json | null;
           created_at: string;
           updated_at: string;
+          // New fields for feePayer verification and rug tracking
+          creation_signature: string | null;
+          creation_verified: boolean;
+          migration_pool_address: string | null;
+          rug_severity: 'soft' | 'hard' | null;
+          dev_sell_percent: number | null;
         };
         Insert: {
           id?: string;
@@ -119,6 +131,12 @@ export interface Database {
           metadata?: Json | null;
           created_at?: string;
           updated_at?: string;
+          // New fields
+          creation_signature?: string | null;
+          creation_verified?: boolean;
+          migration_pool_address?: string | null;
+          rug_severity?: 'soft' | 'hard' | null;
+          dev_sell_percent?: number | null;
         };
         Update: {
           id?: string;
@@ -139,6 +157,12 @@ export interface Database {
           metadata?: Json | null;
           created_at?: string;
           updated_at?: string;
+          // New fields
+          creation_signature?: string | null;
+          creation_verified?: boolean;
+          migration_pool_address?: string | null;
+          rug_severity?: 'soft' | 'hard' | null;
+          dev_sell_percent?: number | null;
         };
       };
       score_history: {
@@ -209,3 +233,31 @@ export type Token = Database['public']['Tables']['tokens']['Row'];
 export type NewToken = Database['public']['Tables']['tokens']['Insert'];
 export type ScoreHistory = Database['public']['Tables']['score_history']['Row'];
 export type ProfileView = Database['public']['Tables']['profile_views']['Row'];
+
+// KOL (Key Opinion Leader) types
+export interface Kol {
+  id: string;
+  wallet_address: string;
+  name: string;
+  twitter_url: string | null;
+  telegram_url: string | null;
+  kolscan_rank: number | null;
+  pnl_sol: number | null;
+  wins: number;
+  losses: number;
+  user_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface NewKol {
+  wallet_address: string;
+  name: string;
+  twitter_url?: string | null;
+  telegram_url?: string | null;
+  kolscan_rank?: number | null;
+  pnl_sol?: number | null;
+  wins?: number;
+  losses?: number;
+  user_id?: string | null;
+}

@@ -1,16 +1,30 @@
 'use client';
 
 import { useState } from 'react';
-import { Share2, Check, Copy, Twitter } from 'lucide-react';
+import { Share2, Check, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 
 interface ShareButtonProps {
   handle: string;
   score: number;
   tierName: string;
+  tierColor?: string;
+  rank?: number | null;
+  tokenCount?: number;
+  migratedCount?: number;
+  avatarUrl?: string;
+  walletAddress?: string;
+  twitterName?: string;
 }
 
-export function ShareButton({ handle, score, tierName }: ShareButtonProps) {
+export function ShareButton({
+  handle,
+  score,
+  tierName,
+  rank,
+  tokenCount,
+  migratedCount,
+}: ShareButtonProps) {
   const [showMenu, setShowMenu] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -18,7 +32,10 @@ export function ShareButton({ handle, score, tierName }: ShareButtonProps) {
     ? `${window.location.origin}/profile/${encodeURIComponent(handle)}`
     : `/profile/${encodeURIComponent(handle)}`;
 
-  const shareText = `Check out my DevKarma profile! Score: ${score} | Tier: ${tierName}`;
+  const rankText = rank ? ` | Rank #${rank}` : '';
+  const launchText = tokenCount ? ` | ${tokenCount} launches` : '';
+  const migratedText = migratedCount ? ` (${migratedCount} migrated)` : '';
+  const shareText = `My DevKarma Score: ${score} (${tierName})${rankText}${launchText}${migratedText}\n\nCheck your developer reputation on @devkarma_io`;
 
   const handleCopyLink = async () => {
     try {
@@ -26,7 +43,6 @@ export function ShareButton({ handle, score, tierName }: ShareButtonProps) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      // Fallback for older browsers
       const textArea = document.createElement('textarea');
       textArea.value = profileUrl;
       document.body.appendChild(textArea);
@@ -36,12 +52,6 @@ export function ShareButton({ handle, score, tierName }: ShareButtonProps) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
-  };
-
-  const handleShareTwitter = () => {
-    const tweetUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(profileUrl)}`;
-    window.open(tweetUrl, '_blank', 'noopener,noreferrer');
-    setShowMenu(false);
   };
 
   const handleNativeShare = async () => {
@@ -82,33 +92,25 @@ export function ShareButton({ handle, score, tierName }: ShareButtonProps) {
             <div className="p-2">
               <button
                 onClick={handleCopyLink}
-                className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-dark/10 transition-colors"
+                className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-accent/10 transition-colors text-dark"
               >
                 {copied ? (
                   <Check size={18} className="text-green-600" />
                 ) : (
-                  <Copy size={18} />
+                  <Copy size={18} className="text-dark" />
                 )}
-                <span className="font-medium text-sm">
+                <span className="font-semibold text-sm text-dark">
                   {copied ? 'Copied!' : 'Copy Link'}
                 </span>
-              </button>
-
-              <button
-                onClick={handleShareTwitter}
-                className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-dark/10 transition-colors"
-              >
-                <Twitter size={18} />
-                <span className="font-medium text-sm">Share on Twitter</span>
               </button>
 
               {typeof navigator !== 'undefined' && typeof navigator.share === 'function' && (
                 <button
                   onClick={handleNativeShare}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-dark/10 transition-colors"
+                  className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-accent/10 transition-colors text-dark"
                 >
-                  <Share2 size={18} />
-                  <span className="font-medium text-sm">More Options...</span>
+                  <Share2 size={18} className="text-dark" />
+                  <span className="font-semibold text-sm text-dark">More Options...</span>
                 </button>
               )}
             </div>

@@ -1,5 +1,5 @@
 /**
- * NextAuth.js configuration for DevKarma
+ * NextAuth.js configuration for DevCred
  * Twitter OAuth for developer authentication
  */
 
@@ -30,32 +30,36 @@ export const authOptions: NextAuthOptions = {
 
       try {
         // Debug: Log the full profile object to see its structure
-        console.log('[DevKarma Auth] Twitter profile received:', JSON.stringify(profile, null, 2));
-        console.log('[DevKarma Auth] User object:', JSON.stringify(user, null, 2));
+        console.log('[DevCred Auth] Twitter profile received:', JSON.stringify(profile, null, 2));
+        console.log('[DevCred Auth] User object:', JSON.stringify(user, null, 2));
 
         // Twitter OAuth 2.0 profile structure: username can be at profile.data.username or profile.username
         const twitterProfile = profile as { data?: { username?: string; name?: string }; username?: string };
         const twitterHandle = twitterProfile?.data?.username || twitterProfile?.username || '';
 
-        console.log('[DevKarma Auth] Extracted twitter handle:', twitterHandle);
+        console.log('[DevCred Auth] Extracted twitter handle:', twitterHandle);
 
         // Check if user exists
         const existingUser = await getUserByTwitterId(account.providerAccountId);
 
         if (existingUser) {
           // Update user info if changed
+          // Use 400x400 avatar size instead of default 48x48 (_normal)
+          const avatarUrl = user.image?.replace('_normal', '_400x400') || existingUser.avatar_url;
           await updateUser(existingUser.id, {
             twitter_handle: twitterHandle || existingUser.twitter_handle,
             twitter_name: user.name || existingUser.twitter_name,
-            avatar_url: user.image || existingUser.avatar_url,
+            avatar_url: avatarUrl,
           });
         } else {
           // Create new user
+          // Use 400x400 avatar size instead of default 48x48 (_normal)
+          const avatarUrl = user.image?.replace('_normal', '_400x400') || null;
           await createUser({
             twitter_id: account.providerAccountId,
             twitter_handle: twitterHandle,
             twitter_name: user.name || '',
-            avatar_url: user.image || null,
+            avatar_url: avatarUrl,
           });
         }
 
@@ -81,7 +85,7 @@ export const authOptions: NextAuthOptions = {
         const dbUser = await getUserByTwitterId(token.twitterId as string);
         if (dbUser) {
           session.user.id = dbUser.id;
-          session.user.twitterHandle = dbUser.twitter_handle;
+          session.user.twitterHandle = dbUser.twitter_handle ?? undefined;
           session.user.totalScore = dbUser.total_score;
           session.user.isVerified = dbUser.is_verified;
           session.user.rank = dbUser.rank;

@@ -1,33 +1,187 @@
-import { getLeaderboard as dbGetLeaderboard, getUserByTwitterHandle, getOrCreateSystemUser, getWalletsByUserId, getTokensForUserWallets, updateUser, addScoreHistory, recordProfileView, upsertToken, updateRanks } from './db';
-import { getTierInfo, DevTier, calculateDevScore, calculateTokenScore } from './scoring';
-import { getTokenMarketData, checkMigrationStatus } from './dexscreener';
-import { getTokensCreatedByWalletFast } from './helius';
+import { getLeaderboard as dbGetLeaderboard, getUserByTwitterHandle, getOrCreateSystemUser, getWalletsByUserId, getTokensForUserWallets, updateUser, addScoreHistory, recordProfileView, upsertToken, updateRanks, getKolByUserId, getKolStatusForUsers, getKolsWithUsers, getAllKols } from './db';
+import { getTierInfo, DevTier, calculateDevScore, calculateTokenScoresBatch, TokenScoreInput } from './scoring';
+import type { Kol } from '@/types/database';
+import { getMultipleTokensMarketData } from './dexscreener';
+import { detectRugPattern, getMigratedTokensFromSwapHistory, batchGetHolderCountsQuick } from './helius';
+import { detectTokensCreatedByWallet } from './token-detection';
 import { PublicKey } from '@solana/web3.js';
+import {
+  mapTokenToDisplayData,
+  mapTokenWithMarketData,
+  deriveMigrationStatus,
+  getPrimaryWallet,
+  isValidSolanaAddress,
+  cleanTwitterHandle,
+  calculateProfileStats,
+  DEFAULT_RUG_DETECTION,
+  safeRugDetection,
+  TokenDisplayData,
+} from './profile-service';
+import { DEX_CONFIG } from './constants';
+import { User, Token } from '@/types/database';
+
+// ==================== USER RESOLUTION ====================
+
+/** Resolve user from Twitter handle or wallet address */
+async function resolveUserFromHandle(handle: string): Promise<User | null> {
+  const cleanHandle = cleanTwitterHandle(handle);
+
+  // Try Twitter handle first
+  let user = await getUserByTwitterHandle(cleanHandle);
+  if (user) return user;
+
+  // Check if it's a valid Solana address
+  try {
+    new PublicKey(cleanHandle);
+    if (isValidSolanaAddress(cleanHandle)) {
+      return await getOrCreateSystemUser(cleanHandle);
+    }
+  } catch {
+    // Not a valid address
+  }
+
+  return null;
+}
+
+// ==================== TOKEN SCANNING ====================
+
+/** Scan wallet for tokens and save to DB */
+async function scanAndSaveTokens(
+  walletAddress: string,
+  userId: string
+): Promise<Token[]> {
+  try {
+    const scanResult = await detectTokensCreatedByWallet(walletAddress);
+    if (scanResult.tokens.length === 0) return [];
+
+    let migratedTokens = new Map<string, { firstSwapTimestamp: number }>();
+    try {
+      const tokenMints = new Set(scanResult.tokens.map(t => t.mintAddress));
+      migratedTokens = await getMigratedTokensFromSwapHistory(walletAddress, tokenMints);
+    } catch (migrationError) {
+      console.error('[scanAndSaveTokens] Migration check failed:', migrationError);
+    }
+
+    const results = await Promise.allSettled(
+      scanResult.tokens.map(async (tokenData) => {
+        const migrationInfo = migratedTokens.get(tokenData.mintAddress);
+
+        const rugDetection = await safeRugDetection(
+          () => detectRugPattern(walletAddress, tokenData.mintAddress, tokenData.creationTimestamp),
+          DEFAULT_RUG_DETECTION
+        );
+
+        return upsertToken({
+          mint_address: tokenData.mintAddress,
+          name: tokenData.name,
+          symbol: tokenData.symbol,
+          creator_wallet: walletAddress,
+          user_id: userId,
+          launch_date: tokenData.creationTimestamp
+            ? new Date(tokenData.creationTimestamp * 1000).toISOString()
+            : new Date().toISOString(),
+          migrated: !!migrationInfo,
+          migrated_at: migrationInfo
+            ? new Date(migrationInfo.firstSwapTimestamp * 1000).toISOString()
+            : undefined,
+          status: rugDetection.isRug ? 'rug' : 'active',
+          score: migrationInfo ? 50 : (rugDetection.isRug ? 0 : 10),
+          metadata: {
+            creation_signature: tokenData.creationSignature,
+            creation_verified: tokenData.confidence === 'high',
+            creation_method: tokenData.creationMethod,
+            rug_severity: rugDetection.severity,
+            dev_sell_percent: rugDetection.sellPercent,
+          },
+        });
+      })
+    );
+
+    const failures = results.filter((r): r is PromiseRejectedResult => r.status === 'rejected');
+    if (failures.length > 0) {
+      console.error(`[scanAndSaveTokens] ${failures.length}/${results.length} token saves failed:`,
+        failures.map(f => f.reason?.message || f.reason).join(', '));
+    }
+
+    return await getTokensForUserWallets(userId);
+  } catch (error) {
+    console.error('[scanAndSaveTokens] Fatal error:', error);
+    return [];
+  }
+}
+
+// ==================== TOKEN ENRICHMENT ====================
+
+/** Enrich tokens with market data and calculate scores */
+async function enrichTokensWithMarketData(
+  tokens: Token[]
+): Promise<TokenDisplayData[]> {
+  const mintAddresses = tokens.map(t => t.mint_address);
+
+  const [marketDataMap, holderCountsMap] = await Promise.all([
+    getMultipleTokensMarketData(mintAddresses),
+    batchGetHolderCountsQuick(mintAddresses),
+  ]);
+
+  const scoreInputs: TokenScoreInput[] = tokens.map((token) => {
+    const marketData = marketDataMap.get(token.mint_address) || null;
+    const holderCount = holderCountsMap.get(token.mint_address) || 0;
+    const metadata = token.metadata as { rug_severity?: 'soft' | 'hard' | null } | null;
+
+    return {
+      mintAddress: token.mint_address,
+      creatorWallet: token.creator_wallet,
+      launchDate: new Date(token.launch_date),
+      isRugged: token.status === 'rug',
+      rugSeverity: metadata?.rug_severity,
+      holderCount,
+      marketData,
+      migrationStatus: deriveMigrationStatus(token, marketData),
+    };
+  });
+
+  const scoreResults = await calculateTokenScoresBatch(scoreInputs);
+
+  return tokens.map((token) => {
+    const marketData = marketDataMap.get(token.mint_address) || null;
+    const scoreResult = scoreResults.find(r => r.mintAddress === token.mint_address);
+    return mapTokenWithMarketData(token, marketData, scoreResult?.score || token.score || 10);
+  });
+}
 
 export interface LeaderboardEntry {
   rank: number;
   id: string;
-  twitterHandle: string;
-  twitterName: string;
+  twitterHandle: string | null;
+  twitterName: string | null;
   avatarUrl: string | null;
+  primaryWallet?: string | null;
   score: number;
   tier: string;
   tierName: string;
   tierColor: string;
   isVerified: boolean;
+  isKol: boolean;
 }
 
 export async function getLeaderboardData(limit: number = 50) {
   const users = await dbGetLeaderboard(limit);
 
+  // Get KOL status for all users in one query
+  const userIds = users.map(u => u.id);
+  const kolStatusMap = await getKolStatusForUsers(userIds);
+
   return users.map((user, index) => {
-    // Determine tier based on score thresholds
+    // Always calculate tier based on score to ensure consistency
     let tier: DevTier = 'unverified';
-    if (user.total_score >= 720) tier = 'legend';
-    else if (user.total_score >= 700) tier = 'elite';
-    else if (user.total_score >= 500) tier = 'proven';
-    else if (user.total_score >= 200) tier = 'builder';
-    else if (user.total_score > 0) tier = 'verified';
+
+    if (user.total_score >= 700) tier = 'legend';
+    else if (user.total_score >= 600) tier = 'elite';
+    else if (user.total_score >= 500) tier = 'rising_star';
+    else if (user.total_score >= 450) tier = 'proven';
+    else if (user.total_score >= 300) tier = 'builder';
+    else if (user.total_score >= 150) tier = 'verified';
+    else if (user.total_score < 0) tier = 'penalized';
 
     const tierInfo = getTierInfo(tier);
 
@@ -37,11 +191,13 @@ export async function getLeaderboardData(limit: number = 50) {
       twitterHandle: user.twitter_handle,
       twitterName: user.twitter_name,
       avatarUrl: user.avatar_url,
+      primaryWallet: user.primary_wallet,
       score: user.total_score,
       tier: tier,
       tierName: tierInfo.name,
       tierColor: tierInfo.color,
       isVerified: user.is_verified,
+      isKol: kolStatusMap.get(user.id) || false,
     };
   });
 }
@@ -49,28 +205,46 @@ export async function getLeaderboardData(limit: number = 50) {
 export interface ProfileData {
   user: {
     id: string;
-    twitterHandle: string;
-    twitterName: string;
+    twitterHandle: string | null;
+    twitterName: string | null;
     avatarUrl: string | null;
     bio: string | null;
     isVerified: boolean;
+    isKol: boolean;
     rank: number | null;
+    primaryWallet?: string | null;
     createdAt: string;
   };
+  kol: {
+    name: string;
+    twitterUrl: string | null;
+    telegramUrl: string | null;
+    kolscanRank: number | null;
+    pnlSol: number | null;
+    wins: number;
+    losses: number;
+  } | null;
   score: {
     total: number;
     tier: string;
     tierName: string;
     tierColor: string;
     breakdown: {
+      baseScore: number;
       tokenCount: number;
       migrationCount: number;
-      averageTokenScore: number;
-      weightedScore: number;
+      migrationBonus: number;
+      marketCapBonus: number;
+      tokenScoreBonus: number;
+      rugPenalties: number;
+      rugCount: number;
+      hardRugCount: number;
       accountAgeMonths: number;
+      averageTokenScore: number;
     };
   };
   wallets: Array<{
+    id: string;
     address: string;
     label: string | null;
     isPrimary: boolean;
@@ -83,137 +257,56 @@ export interface ProfileData {
     migrated: boolean;
     marketCap: number | null;
     volume24h: number | null;
+    totalVolume: number | null;
+    athMarketCap?: number | null;
     status: string;
     score: number;
+    rugSeverity?: 'soft' | 'hard' | null;
+    creationVerified?: boolean;
   }>;
   stats: {
     totalTokens: number;
     migratedTokens: number;
     avgTokenScore: number;
+    rugCount: number;
   };
 }
 
-export async function getProfileData(handle: string, viewerIp?: string): Promise<ProfileData | null> {
+export async function getProfileData(handle: string, viewerIp?: string, forceRefresh = false): Promise<ProfileData | null> {
   try {
-    const cleanHandle = handle.replace(/^@/, '');
+    // Step 1: Resolve user from handle or wallet address
+    const user = await resolveUserFromHandle(handle);
+    if (!user) return null;
 
-    // First try Twitter handle lookup
-    let user = await getUserByTwitterHandle(cleanHandle);
-
-    // If not found, check if it's a valid Solana wallet address
-    if (!user) {
-      let isValidAddress = false;
-      try {
-        new PublicKey(cleanHandle);
-        isValidAddress = cleanHandle.length >= 32 && cleanHandle.length <= 44;
-      } catch {
-        isValidAddress = false;
-      }
-
-      if (isValidAddress) {
-        // Create/get system user for unclaimed wallet
-        user = await getOrCreateSystemUser(cleanHandle);
-      }
-    }
-
-    if (!user) {
-      return null;
-    }
-
+    // Step 2: Get wallets and existing tokens
     const wallets = await getWalletsByUserId(user.id);
     let tokens = await getTokensForUserWallets(user.id);
-
-    // Track if this is a fresh scan (skip slow API calls for first load)
     let freshScan = false;
 
-    // If new system user (no tokens yet), trigger initial wallet scan
+    // Step 3: Scan for new tokens if needed
     if (tokens.length === 0 && wallets.length > 0) {
-      const primaryWallet = wallets.find(w => w.is_primary) || wallets[0];
-
-      // Fast scan: just get tokens from DAS API (no slow transaction history lookups)
-      const scanResult = await getTokensCreatedByWalletFast(primaryWallet.address);
-
-      if (scanResult.tokens.length > 0) {
-        freshScan = true;
-        // Batch upsert tokens quickly without individual market data calls
-        await Promise.all(
-          scanResult.tokens.map(async (tokenData) => {
-            const migrationInfo = scanResult.migrated.get(tokenData.mintAddress);
-            await upsertToken({
-              mint_address: tokenData.mintAddress,
-              name: tokenData.name,
-              symbol: tokenData.symbol,
-              creator_wallet: primaryWallet.address,
-              user_id: user.id,
-              launch_date: new Date().toISOString(),
-              migrated: !!migrationInfo,
-              migrated_at: migrationInfo ? new Date(migrationInfo.firstSwapTimestamp * 1000).toISOString() : undefined,
-              status: 'active',
-              score: migrationInfo ? 50 : 10,
-            });
-          })
-        );
-
-        // Refresh tokens list from DB after scan
-        tokens = await getTokensForUserWallets(user.id);
+      const primaryWallet = getPrimaryWallet(wallets);
+      if (primaryWallet) {
+        tokens = await scanAndSaveTokens(primaryWallet.address, user.id);
+        freshScan = tokens.length > 0;
       }
     }
 
-    // Calculate token scores - skip slow API calls on fresh scans for faster load
-    const tokenScores = await Promise.all(
-      tokens.map(async (token) => {
-        // For fresh scans, use DB data only; for existing profiles, fetch live data
-        if (freshScan) {
-          return {
-            mint: token.mint_address,
-            name: token.name,
-            symbol: token.symbol,
-            launchDate: token.launch_date,
-            migrated: token.migrated,
-            marketCap: token.current_market_cap,
-            volume24h: null,
-            status: token.status,
-            score: token.score || (token.migrated ? 50 : 10),
-          };
-        }
+    // Step 4: Calculate token scores
+    // Use cached DB data by default (FAST) - only fetch live market data if explicitly requested
+    const tokenScores: TokenDisplayData[] = forceRefresh
+      ? await enrichTokensWithMarketData(tokens)
+      : tokens.map(mapTokenToDisplayData);
 
-        const marketData = await getTokenMarketData(token.mint_address).catch(() => null);
-        const migrationStatus = await checkMigrationStatus(token.mint_address).catch(() => ({
-          migrated: token.migrated,
-          migrationType: null,
-          pool: null,
-          liquidityUsd: 0,
-          migratedAt: token.migrated_at ? new Date(token.migrated_at) : null,
-        }));
-
-        const scoreResult = await calculateTokenScore({
-          mintAddress: token.mint_address,
-          creatorWallet: token.creator_wallet,
-          launchDate: new Date(token.launch_date),
-          isRugged: token.status === 'rug',
-          marketData,
-          migrationStatus,
-        });
-
-        return {
-          mint: token.mint_address,
-          name: token.name,
-          symbol: token.symbol,
-          launchDate: token.launch_date,
-          migrated: migrationStatus.migrated,
-          marketCap: marketData?.marketCap || token.current_market_cap,
-          volume24h: marketData?.volume24h || null,
-          status: token.status,
-          score: scoreResult.score,
-        };
-      })
-    );
-
+    // Calculate dev score with the new base-500 system
     const devScore = calculateDevScore({
       tokens: tokenScores.map((t) => ({
         score: t.score,
         migrated: t.migrated,
         launchDate: new Date(t.launchDate),
+        athMarketCap: t.athMarketCap || undefined,
+        status: t.status as 'active' | 'inactive' | 'rug',
+        rugSeverity: t.rugSeverity,
       })),
       walletCount: wallets.length,
       accountCreatedAt: new Date(user.created_at),
@@ -228,6 +321,9 @@ export async function getProfileData(handle: string, viewerIp?: string): Promise
 
     const tierInfo = getTierInfo(devScore.tier);
 
+    // Check if user is a KOL
+    const kol = await getKolByUserId(user.id);
+
     // Record profile view
     if (viewerIp) {
       recordProfileView(user.id, viewerIp).catch(() => {});
@@ -241,9 +337,19 @@ export async function getProfileData(handle: string, viewerIp?: string): Promise
         avatarUrl: user.avatar_url,
         bio: user.bio,
         isVerified: user.is_verified,
+        isKol: !!kol,
         rank: user.rank,
         createdAt: user.created_at,
       },
+      kol: kol ? {
+        name: kol.name,
+        twitterUrl: kol.twitter_url,
+        telegramUrl: kol.telegram_url,
+        kolscanRank: kol.kolscan_rank,
+        pnlSol: kol.pnl_sol ? Number(kol.pnl_sol) : null,
+        wins: kol.wins,
+        losses: kol.losses,
+      } : null,
       score: {
         total: devScore.score,
         tier: devScore.tier,
@@ -252,19 +358,110 @@ export async function getProfileData(handle: string, viewerIp?: string): Promise
         breakdown: devScore.breakdown,
       },
       wallets: wallets.map((w) => ({
+        id: w.id,
         address: w.address,
         label: w.label,
         isPrimary: w.is_primary,
       })),
-      tokens: tokenScores,
+      tokens: tokenScores.map(t => ({
+        mint: t.mint,
+        name: t.name,
+        symbol: t.symbol,
+        launchDate: t.launchDate,
+        migrated: t.migrated,
+        marketCap: t.marketCap,
+        volume24h: t.volume24h,
+        totalVolume: t.totalVolume,
+        athMarketCap: t.athMarketCap,
+        status: t.status,
+        score: t.score,
+        rugSeverity: t.rugSeverity,
+        creationVerified: t.creationVerified,
+      })),
       stats: {
         totalTokens: tokens.length,
         migratedTokens: devScore.breakdown.migrationCount,
         avgTokenScore: devScore.breakdown.averageTokenScore,
+        rugCount: devScore.breakdown.rugCount,
       },
     };
   } catch (error) {
     console.error('Error fetching profile data:', error);
     return null;
   }
+}
+
+// KOL Leaderboard Types
+export interface KolLeaderboardEntry {
+  id: string;
+  walletAddress: string;
+  name: string;
+  twitterUrl: string | null;
+  telegramUrl: string | null;
+  kolscanRank: number | null;
+  pnlSol: number | null;
+  wins: number;
+  losses: number;
+  isClaimed: boolean;
+  user: {
+    id: string;
+    twitterHandle: string | null;
+    twitterName: string | null;
+    avatarUrl: string | null;
+    primaryWallet?: string | null;
+    score: number;
+    rank: number | null;
+    tier: string;
+    tierName: string;
+    tierColor: string;
+    isVerified: boolean;
+  } | null;
+}
+
+export async function getKolLeaderboardData(limit: number = 50): Promise<KolLeaderboardEntry[]> {
+  const kols = await getKolsWithUsers(limit);
+
+  return kols.map((kol) => {
+    let tier: DevTier = 'unverified';
+    let tierInfo = getTierInfo(tier);
+
+    if (kol.user_total_score !== undefined && kol.user_total_score !== null) {
+      const score = Number(kol.user_total_score);
+      if (score >= 700) tier = 'legend';
+      else if (score >= 600) tier = 'elite';
+      else if (score >= 500) tier = 'rising_star';
+      else if (score >= 450) tier = 'proven';
+      else if (score >= 300) tier = 'builder';
+      else if (score >= 150) tier = 'verified';
+      else if (score < 0) tier = 'penalized';
+      tierInfo = getTierInfo(tier);
+    }
+
+    const hasUser = kol.user_id && kol.user_twitter_handle;
+
+    return {
+      id: kol.id,
+      walletAddress: kol.wallet_address,
+      name: kol.name,
+      twitterUrl: kol.twitter_url,
+      telegramUrl: kol.telegram_url,
+      kolscanRank: kol.kolscan_rank,
+      pnlSol: kol.pnl_sol ? Number(kol.pnl_sol) : null,
+      wins: kol.wins,
+      losses: kol.losses,
+      isClaimed: !!hasUser,
+      user: hasUser ? {
+        id: kol.user_id!,
+        twitterHandle: kol.user_twitter_handle!,
+        twitterName: kol.user_twitter_name!,
+        avatarUrl: kol.user_avatar_url || null,
+        score: Number(kol.user_total_score) || 0,
+        rank: kol.user_rank || null,
+        tier,
+        tierName: tierInfo.name,
+        tierColor: tierInfo.color,
+        isVerified: kol.user_is_verified || false,
+      } : null,
+    };
+  });
 }

@@ -10,10 +10,19 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
-        hostname: '*.twimg.com',
+        hostname: 'abs.twimg.com',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'api.dicebear.com',
         pathname: '/**',
       },
     ],
+    // Allow SVG images
+    dangerouslyAllowSVG: true,
+    contentDispositionType: 'attachment',
+    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
   },
 };
 

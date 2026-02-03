@@ -9,9 +9,9 @@ import {
   addScoreHistory,
   getTokensForUserWallets
 } from '@/lib/db';
-import { getAllTokensCreatedByWallet } from '@/lib/helius';
-import { getTokenMarketData, checkMigrationStatus } from '@/lib/dexscreener';
-import { calculateTokenScore, calculateDevScore } from '@/lib/scoring';
+import { scanWalletQuick } from '@/lib/wallet-scan';
+import { calculateDevScore } from '@/lib/scoring';
+import { checkRateLimit, getRateLimitIdentifier, rateLimitHeaders, RATE_LIMIT_CONFIGS } from '@/lib/api-rate-limiter';
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,6 +19,16 @@ export async function POST(request: NextRequest) {
 
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Rate limiting - sync is expensive (calls Helius API)
+    const rateLimitId = getRateLimitIdentifier('user-sync', session.user.id);
+    const rateLimit = checkRateLimit(rateLimitId, RATE_LIMIT_CONFIGS.userSync);
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { error: 'Sync limit reached. Please wait before syncing again.' },
+        { status: 429, headers: rateLimitHeaders(rateLimit) }
+      );
     }
 
     const userId = session.user.id;
@@ -41,64 +51,40 @@ export async function POST(request: NextRequest) {
     let totalTokensFound = 0;
     const allTokenScores: Array<{ score: number; migrated: boolean; launchDate: Date }> = [];
 
-    // Fetch tokens for each wallet
+    // Scan all wallets using optimized batch API calls
     for (const wallet of wallets) {
       try {
-        // Use combined detection (DAS API + transaction history)
-        const tokensCreated = await getAllTokensCreatedByWallet(wallet.address);
+        // Use NEW optimized wallet scan (batched API calls)
+        const scanResult = await scanWalletQuick(wallet.address);
 
-        for (const tokenData of tokensCreated) {
+        // Save each token to database
+        for (const token of scanResult.tokensCreated) {
           totalTokensFound++;
 
-          // Get market data and migration status
-          const marketData = await getTokenMarketData(tokenData.mintAddress).catch(() => null);
-          const migrationStatus = await checkMigrationStatus(tokenData.mintAddress).catch(() => ({ 
-            migrated: false, 
-            migrationType: null, 
-            pool: null, 
-            liquidityUsd: 0, 
-            migratedAt: null 
-          }));
-
-          // Use creation time from market data or fallback to 30 days ago
-          const launchDate = marketData?.pairCreatedAt
-            ? new Date(marketData.pairCreatedAt)
-            : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-
-          // Calculate token score
-          const scoreResult = await calculateTokenScore({
-            mintAddress: tokenData.mintAddress,
-            creatorWallet: wallet.address,
-            launchDate,
-            marketData,
-            migrationStatus,
-          });
-
-          // Upsert token to database
           await upsertToken({
-            mint_address: tokenData.mintAddress,
-            name: tokenData.name || 'Unknown',
-            symbol: tokenData.symbol || 'UNK',
+            mint_address: token.mintAddress,
+            name: token.name || 'Unknown',
+            symbol: token.symbol || 'UNK',
             creator_wallet: wallet.address,
             user_id: userId,
-            launch_date: launchDate.toISOString(),
-            migrated: migrationStatus.migrated,
-            migrated_at: migrationStatus.migrated ? new Date().toISOString() : null,
-            current_market_cap: marketData?.marketCap,
-            ath_market_cap: marketData?.marketCap, // We'd track this over time in production
-            total_volume: marketData?.volume24h,
-            score: scoreResult.score,
-            status: 'active',
+            launch_date: new Date(token.launchedAt * 1000).toISOString(),
+            migrated: token.migrated,
+            migrated_at: token.migrated ? new Date().toISOString() : null,
+            current_market_cap: token.marketCap ? Math.round(token.marketCap) : null,
+            ath_market_cap: token.marketCap ? Math.round(token.marketCap) : null,
+            total_volume: null,
+            score: token.score.total,
+            status: token.isRugged ? 'rug' : 'active',
             metadata: {
-              dex: migrationStatus.migrationType,
-              pairAddress: marketData?.pairAddress,
+              holders: token.currentHolders,
+              dev_holding_percent: token.devHoldingPercent,
             },
           });
 
           allTokenScores.push({
-            score: scoreResult.score,
-            migrated: migrationStatus.migrated,
-            launchDate,
+            score: token.score.total,
+            migrated: token.migrated,
+            launchDate: new Date(token.launchedAt * 1000),
           });
         }
       } catch (walletError) {

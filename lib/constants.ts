@@ -5,7 +5,7 @@
 
 // ==================== API LIMITS ====================
 export const API_LIMITS = {
-  HELIUS_RPS: 10,
+  HELIUS_RPS: 50, // Helius dev plan
   DEXSCREENER_PER_MINUTE: 300,
   GECKO_PER_MINUTE: 30,
   HELIUS_BATCH_SIZE: 1000,

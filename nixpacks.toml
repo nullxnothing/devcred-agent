@@ -1,0 +1,10 @@
+[phases.setup]
+nixPkgs = ["nodejs_22", "python3"]
+aptPkgs = ["build-essential", "libusb-1.0-0-dev", "libudev-dev"]
+
+[start]
+cmd = "npm run agent"
+
+[deploy]
+healthcheckPath = ""
+healthcheckTimeout = 0

@@ -8,7 +8,7 @@
  * In production, replace in-memory cache with Redis for horizontal scaling.
  */
 
-import { Pool } from 'pg';
+import { pool } from './db/pool';
 
 // TTL constants by data type
 export const CACHE_TTL = {
@@ -132,19 +132,40 @@ export function getCacheStats(): {
 }
 
 // ============================================================
-// DATABASE CACHE (for cold data - token creations, scan results)
+// IN-MEMORY CACHE CLEANUP (prevents memory leaks)
 // ============================================================
 
-let pool: Pool | null = null;
+const CLEANUP_INTERVAL_MS = 60000; // 1 minute
 
-function getPool(): Pool {
-  if (!pool) {
-    pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
-    });
+function cleanupExpiredEntries<T>(cache: Map<string, CachedData<T>>): number {
+  const now = Date.now();
+  let cleaned = 0;
+  for (const [key, value] of cache) {
+    if (now - value.cachedAt > value.ttl) {
+      cache.delete(key);
+      cleaned++;
+    }
   }
-  return pool;
+  return cleaned;
 }
+
+function startCacheCleanup(): void {
+  setInterval(() => {
+    cleanupExpiredEntries(marketDataCache);
+    cleanupExpiredEntries(holderCountCache);
+    cleanupExpiredEntries(devHoldingsCache);
+    cleanupExpiredEntries(migrationCache);
+  }, CLEANUP_INTERVAL_MS);
+}
+
+// Start cleanup on module load (only in Node.js environment)
+if (typeof setInterval !== 'undefined') {
+  startCacheCleanup();
+}
+
+// ============================================================
+// DATABASE CACHE (for cold data - token creations, scan results)
+// ============================================================
 
 export interface CachedWalletTokens {
   walletAddress: string;
@@ -180,8 +201,7 @@ export async function getCachedWalletTokens(
   walletAddress: string
 ): Promise<CachedWalletTokens['tokens'] | null> {
   try {
-    const db = getPool();
-    const result = await db.query(
+        const result = await pool.query(
       `SELECT tokens FROM dk_wallet_tokens_cache
        WHERE wallet_address = $1
        AND cached_at > NOW() - INTERVAL '24 hours'`,
@@ -207,8 +227,7 @@ export async function setCachedWalletTokens(
   tokens: CachedWalletTokens['tokens']
 ): Promise<void> {
   try {
-    const db = getPool();
-    await db.query(
+        await pool.query(
       `INSERT INTO dk_wallet_tokens_cache (wallet_address, tokens, cached_at)
        VALUES ($1, $2, NOW())
        ON CONFLICT (wallet_address)
@@ -227,8 +246,7 @@ export async function getCachedWalletScan(
   walletAddress: string
 ): Promise<CachedWalletScan | null> {
   try {
-    const db = getPool();
-    const result = await db.query(
+        const result = await pool.query(
       `SELECT * FROM dk_wallet_scan_cache
        WHERE wallet_address = $1
        AND cached_at > NOW() - INTERVAL '1 hour'`,
@@ -264,8 +282,7 @@ export async function setCachedWalletScan(
   scan: Omit<CachedWalletScan, 'walletAddress' | 'cachedAt'>
 ): Promise<void> {
   try {
-    const db = getPool();
-    await db.query(
+        await pool.query(
       `INSERT INTO dk_wallet_scan_cache
        (wallet_address, total_score, tier, token_count, migration_count, rug_count, tokens_data, cached_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
@@ -298,10 +315,9 @@ export async function setCachedWalletScan(
  */
 export async function invalidateWalletCache(walletAddress: string): Promise<void> {
   try {
-    const db = getPool();
-    await Promise.all([
-      db.query('DELETE FROM dk_wallet_tokens_cache WHERE wallet_address = $1', [walletAddress]),
-      db.query('DELETE FROM dk_wallet_scan_cache WHERE wallet_address = $1', [walletAddress]),
+        await Promise.all([
+      pool.query('DELETE FROM dk_wallet_tokens_cache WHERE wallet_address = $1', [walletAddress]),
+      pool.query('DELETE FROM dk_wallet_scan_cache WHERE wallet_address = $1', [walletAddress]),
     ]);
   } catch (error) {
     console.error('Error invalidating wallet cache:', error);
@@ -316,10 +332,9 @@ export async function cleanupExpiredCache(): Promise<{
   scansDeleted: number;
 }> {
   try {
-    const db = getPool();
-    const [tokensResult, scansResult] = await Promise.all([
-      db.query(`DELETE FROM dk_wallet_tokens_cache WHERE cached_at < NOW() - INTERVAL '24 hours'`),
-      db.query(`DELETE FROM dk_wallet_scan_cache WHERE cached_at < NOW() - INTERVAL '1 hour'`),
+        const [tokensResult, scansResult] = await Promise.all([
+      pool.query(`DELETE FROM dk_wallet_tokens_cache WHERE cached_at < NOW() - INTERVAL '24 hours'`),
+      pool.query(`DELETE FROM dk_wallet_scan_cache WHERE cached_at < NOW() - INTERVAL '1 hour'`),
     ]);
 
     return {

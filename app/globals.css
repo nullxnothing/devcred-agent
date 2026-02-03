@@ -11,26 +11,52 @@
 }
 
 :root {
-  /* Brand Colors - Coral/Dark/Cream Brutalist Theme */
-  --cream: #FBF0DF;
-  --cream-dark: #E8DDCD;
+  /* DevKarma Brand Colors - Clean/Professional Theme */
   --dark: #3B3B3B;
-  --dark-light: #4B4B4B;
-  --accent: #FF7B7B;
-  --accent-dark: #E56A6A;
+  --dark-light: #4A4A4A;
+  --dark-medium: #5A5A5A;
+  --cream: #FBF0DF;
+  --cream-dark: #F5E6D3;
+  --white: #FFFFFF;
+  --accent: #2e4a3b;           /* Forest green */
+  --accent-light: #3d6350;
+  --accent-dark: #1f3228;
   --border: #3B3B3B;
   --text-muted: #6B6B6B;
+
+  /* Score Colors - Graduated scale */
+  --score-legend: #FFD700;     /* Gold */
+  --score-elite: #2e4a3b;      /* Green */
+  --score-proven: #22c55e;     /* Bright green */
+  --score-builder: #3b82f6;    /* Blue */
+  --score-verified: #6B7280;   /* Neutral gray */
+  --score-low: #F97316;        /* Orange - warning */
+  --score-danger: #DC2626;     /* Red - penalized/rug */
+  --score-negative: #EF4444;   /* Bright red */
 }
 
 @theme inline {
   --color-cream: var(--cream);
   --color-cream-dark: var(--cream-dark);
+  --color-white: var(--white);
   --color-dark: var(--dark);
   --color-dark-light: var(--dark-light);
+  --color-dark-medium: var(--dark-medium);
   --color-accent: var(--accent);
+  --color-accent-light: var(--accent-light);
   --color-accent-dark: var(--accent-dark);
   --color-border: var(--border);
   --color-text-muted: var(--text-muted);
+
+  /* Score colors */
+  --color-score-legend: var(--score-legend);
+  --color-score-elite: var(--score-elite);
+  --color-score-proven: var(--score-proven);
+  --color-score-builder: var(--score-builder);
+  --color-score-verified: var(--score-verified);
+  --color-score-low: var(--score-low);
+  --color-score-danger: var(--score-danger);
+  --color-score-negative: var(--score-negative);
 
   --font-display: var(--font-marker), sans-serif;
   --font-body: var(--font-dm-sans), sans-serif;
@@ -43,7 +69,7 @@ body {
   font-family: var(--font-dm-sans), sans-serif;
 }
 
-/* Display heading utility - mimics bold uppercase brutalist style */
+/* Display heading utility */
 .font-display-mock {
   font-family: var(--font-marker), system-ui, sans-serif;
   font-weight: 900;
@@ -74,4 +100,129 @@ body {
 ::selection {
   background-color: var(--accent);
   color: white;
+}
+
+/* Animated gradient for tier badges */
+@keyframes gradient-x {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+.animate-gradient-x {
+  animation: gradient-x 3s ease infinite;
+}
+
+/* Shimmer effect for legend tier */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 2s linear infinite;
+  background-size: 200% 100%;
+}
+
+/* Glow pulse for high scores */
+@keyframes glow-pulse {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(46, 74, 59, 0.4), 0 0 40px rgba(46, 74, 59, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(46, 74, 59, 0.6), 0 0 60px rgba(46, 74, 59, 0.3);
+  }
+}
+
+.animate-glow-pulse {
+  animation: glow-pulse 2s ease-in-out infinite;
+}
+
+/* Gold glow for legend tier */
+@keyframes gold-glow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.5), 0 0 40px rgba(255, 215, 0, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 35px rgba(255, 215, 0, 0.7), 0 0 70px rgba(255, 215, 0, 0.3);
+  }
+}
+
+.animate-gold-glow {
+  animation: gold-glow 2s ease-in-out infinite;
+}
+
+/* Score text glow */
+.score-glow-legend {
+  text-shadow: 0 0 20px rgba(255, 215, 0, 0.8), 0 0 40px rgba(255, 215, 0, 0.4);
+}
+
+.score-glow-elite {
+  text-shadow: 0 0 15px rgba(46, 74, 59, 0.6), 0 0 30px rgba(46, 74, 59, 0.3);
+}
+
+.score-glow-proven {
+  text-shadow: 0 0 12px rgba(34, 197, 94, 0.5), 0 0 24px rgba(34, 197, 94, 0.2);
+}
+
+/* Floating animation for decorative elements */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0) rotate(var(--float-rotate, 0deg));
+  }
+  50% {
+    transform: translateY(-8px) rotate(var(--float-rotate, 0deg));
+  }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-float-delayed {
+  animation: float 3s ease-in-out infinite;
+  animation-delay: 1.5s;
+}
+
+/* Button press effect */
+.btn-press {
+  transition: all 0.15s ease;
+}
+
+.btn-press:active {
+  transform: translate(2px, 2px);
+  box-shadow: none !important;
+}
+
+/* Grid pattern for backgrounds */
+.grid-pattern {
+  background-image:
+    linear-gradient(rgba(251, 240, 223, 0.3) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(251, 240, 223, 0.3) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+/* Pixel art scanlines effect */
+.scanlines::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.15),
+    rgba(0, 0, 0, 0.15) 1px,
+    transparent 1px,
+    transparent 2px
+  );
 }

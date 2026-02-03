@@ -1,89 +1,97 @@
 /**
- * Scoring Engine for DevKarma
- * Calculates token scores (0-150) and dev scores (0-740)
+ * Scoring Engine for DevCred
+ *
+ * SIMPLIFIED SCORING SYSTEM:
+ * - Token scores: 0-100 per token
+ *   - Migration: 0-30 (did it successfully migrate to DEX?)
+ *   - Traction: 0-25 (ATH market cap achieved)
+ *   - Holder Retention: 0-20 (how many holders stuck around?)
+ *   - Dev Behavior: 0-15 (did dev dump or hold reasonably?)
+ *   - Longevity: 0-10 (how long has token been alive?)
+ *   - Rug Penalty: -100 (detected rug = total score is -100)
+ *
+ * - Dev scores: 0-740 (weighted average + bonuses)
+ *   - Base calculation from token scores
+ *   - Bonuses for migrations and market cap milestones
+ *   - Heavy penalties for rugs
  */
 
-import { getTokenHolders, getTokenTransfersForWallet } from './helius';
-import { getTokenMarketData, checkMigrationStatus, TokenMarketData, MigrationStatus } from './dexscreener';
+import { batchGetHolderCountsQuick, getHolderCountForScoring } from './helius';
+import { TokenMarketData, MigrationStatus } from './dexscreener';
 
-// Scoring constants - no magic numbers
+// Scoring constants
 const SCORE_CONSTANTS = {
-  // Token score caps
-  MAX_TOKEN_SCORE: 150,
-
-  // Migration bonus
-  MIGRATION_BONUS: 50,
-
-  // ATH Market Cap scoring
-  ATH_MAX_SCORE: 30,
-  ATH_DIVISOR: 25000, // $25K for each point (more generous)
-
-  // Holder retention scoring
-  HOLDER_RETENTION_MAX_SCORE: 20,
-
-  // Dev behavior scoring
-  DEV_BEHAVIOR_MAX_SCORE: 20,
-  DEV_DUMP_THRESHOLD_PERCENT: 50, // >50% sold = dump
-  DEV_DUMP_SEVERE_THRESHOLD: 80, // >80% sold = severe dump
-
-  // Bundle scoring
-  BUNDLE_MAX_SCORE: 15,
-  BUNDLE_EXCELLENT_THRESHOLD: 5, // <5% bundled
-  BUNDLE_GOOD_THRESHOLD: 10, // <10% bundled
-  BUNDLE_ACCEPTABLE_THRESHOLD: 20, // <20% bundled
-
-  // Longevity scoring
-  LONGEVITY_MAX_SCORE: 10,
-  LONGEVITY_DAYS_PER_POINT: 7, // 1 point per week
-
-  // Community scoring
-  COMMUNITY_MAX_SCORE: 5,
+  // Token score components (total max: 100)
+  MAX_TOKEN_SCORE: 100,
+  MIGRATION_MAX: 30,
+  TRACTION_MAX: 25,
+  HOLDER_RETENTION_MAX: 20,
+  DEV_BEHAVIOR_MAX: 15,
+  LONGEVITY_MAX: 10,
 
   // Rug penalty
   RUG_PENALTY: -100,
 
-  // Dev score
+  // Dev score bounds
+  BASE_DEV_SCORE: 500,
+  FLOOR_DEV_SCORE: 0,
   MAX_DEV_SCORE: 740,
-  MIN_TOKENS_FOR_FULL_WEIGHT: 3, // Need 3+ tokens for full score weight (more lenient)
-  DEV_SCORE_MULTIPLIER: 5, // Convert token average to 740 scale
+
+  // Dev score calculation
+  BASE_MULTIPLIER: 5.5, // Scales token avg to 0-550 range (was 4x = 0-400)
+  FIRST_MIGRATION_BONUS: 75, // Big bonus for first successful migration
+
+  // Dev score bonuses per additional migration
+  MIGRATION_BONUS: 25, // For 2nd, 3rd, etc.
+
+  // Market cap milestone bonuses (generous - $500K is top 5% of launches)
+  MCAP_100K_BONUS: 25,
+  MCAP_500K_BONUS: 50,
+  MCAP_1M_BONUS: 75,
+  MCAP_10M_BONUS: 100,
+
+  // Rug penalty for dev score (per rug)
+  DEV_RUG_PENALTY: 150,
 } as const;
 
 // Tier thresholds
 export const TIER_THRESHOLDS = {
-  LEGEND: { minScore: 720, minMigrations: 5, minMonths: 6 },
-  ELITE: { minScore: 700, minMigrations: 3 },
-  PROVEN: { minMigrations: 1 },
-  BUILDER: { minTokens: 3 },
-  VERIFIED: { minWallets: 1 },
+  LEGEND: { minScore: 700, minMigrations: 5, minMonths: 6 },
+  ELITE: { minScore: 600, minMigrations: 3 },
+  RISING_STAR: { minScore: 500, minMcap: 500_000 }, // Single exceptional launch ($500K+)
+  PROVEN: { minScore: 450, minMigrations: 1 },
+  BUILDER: { minScore: 300, minTokens: 3 },
+  VERIFIED: { minScore: 150 },
+  PENALIZED: { maxScore: 150 },
   UNVERIFIED: {},
 } as const;
 
-export type DevTier = 'legend' | 'elite' | 'proven' | 'builder' | 'verified' | 'unverified';
+export type DevTier = 'legend' | 'elite' | 'rising_star' | 'proven' | 'builder' | 'verified' | 'penalized' | 'unverified';
 
 export interface TokenScoreBreakdown {
-  migration: number;
-  athMarketCap: number;
-  holderRetention: number;
-  devBehavior: number;
-  bundleBehavior: number;
-  longevity: number;
-  community: number;
-  rugPenalty: number;
-  total: number;
+  migration: number;      // 0-30
+  traction: number;       // 0-25 (was athMarketCap)
+  holderRetention: number; // 0-20
+  devBehavior: number;    // 0-15 (or -100 for rug)
+  longevity: number;      // 0-10
+  total: number;          // 0-100 (or -100 for rug)
 }
 
+// Keep old interface for backward compatibility
 export interface TokenScoreInput {
   mintAddress: string;
   creatorWallet: string;
   launchDate: Date;
   isRugged?: boolean;
+  rugSeverity?: 'soft' | 'hard' | null;
   communityActive?: boolean;
   bundlePercent?: number;
-  // Optional pre-fetched data (to avoid redundant API calls)
+  // Optional pre-fetched data
   marketData?: TokenMarketData | null;
   migrationStatus?: MigrationStatus;
   holderCount?: number;
   holderCountAtAth?: number;
+  devHoldingPercent?: number;
 }
 
 export interface DevScoreInput {
@@ -91,6 +99,9 @@ export interface DevScoreInput {
     score: number;
     migrated: boolean;
     launchDate: Date;
+    athMarketCap?: number;
+    status?: 'active' | 'inactive' | 'rug';
+    rugSeverity?: 'soft' | 'hard' | null;
   }>;
   walletCount: number;
   accountCreatedAt: Date;
@@ -100,251 +111,280 @@ export interface DevScoreResult {
   score: number;
   tier: DevTier;
   breakdown: {
+    baseScore: number;
     tokenCount: number;
     migrationCount: number;
-    averageTokenScore: number;
-    weightedScore: number;
+    migrationBonus: number;
+    marketCapBonus: number;
+    tokenScoreBonus: number;
+    rugPenalties: number;
+    rugCount: number;
+    hardRugCount: number;
     accountAgeMonths: number;
+    averageTokenScore: number;
   };
 }
 
+export interface RugDetectionResult {
+  isRug: boolean;
+  severity: 'soft' | 'hard' | null;
+  sellPercent: number;
+  sellTimestampFirst?: number;
+  sellTimestampLast?: number;
+  totalReceived: number;
+  totalSold: number;
+}
+
 /**
- * Calculate score for a single token
- * Returns score (0-150) with full breakdown
+ * Calculate score for a single token (0-100, or -100 if rugged)
  */
 export async function calculateTokenScore(input: TokenScoreInput): Promise<{
   score: number;
   breakdown: TokenScoreBreakdown;
+  rugDetection?: RugDetectionResult;
 }> {
+  // If rugged, return -100 immediately
+  if (input.isRugged) {
+    return {
+      score: -100,
+      breakdown: {
+        migration: 0,
+        traction: 0,
+        holderRetention: 0,
+        devBehavior: -100,
+        longevity: 0,
+        total: -100,
+      },
+    };
+  }
+
   const breakdown: TokenScoreBreakdown = {
     migration: 0,
-    athMarketCap: 0,
+    traction: 0,
     holderRetention: 0,
     devBehavior: 0,
-    bundleBehavior: 0,
     longevity: 0,
-    community: 0,
-    rugPenalty: 0,
     total: 0,
   };
 
-  // Fetch data if not provided
-  const marketData = input.marketData ?? await getTokenMarketData(input.mintAddress);
-  const migrationStatus = input.migrationStatus ?? await checkMigrationStatus(input.mintAddress);
-
-  // 1. Migration bonus (+50)
-  if (migrationStatus.migrated) {
-    breakdown.migration = SCORE_CONSTANTS.MIGRATION_BONUS;
+  // ========== MIGRATION (0-30 points) ==========
+  const migrated = input.migrationStatus?.migrated ?? false;
+  if (migrated) {
+    breakdown.migration = SCORE_CONSTANTS.MIGRATION_MAX;
   }
 
-  // 2. ATH Market Cap (+1 to +30)
-  if (marketData?.marketCap) {
-    // Using current market cap as proxy for ATH if ATH not available
-    // In production, you'd track ATH over time
-    breakdown.athMarketCap = Math.min(
-      SCORE_CONSTANTS.ATH_MAX_SCORE,
-      Math.floor(marketData.marketCap / SCORE_CONSTANTS.ATH_DIVISOR)
-    );
-  }
+  // ========== TRACTION (0-25 points) ==========
+  // Based on ATH market cap achieved (rewards past success even if token fizzled)
+  // More generous thresholds - most tokens never hit $100K
+  const athMarketCap = input.marketData?.athMarketCap || input.marketData?.marketCap || 0;
+  if (athMarketCap >= 10_000_000) breakdown.traction = 25;       // $10M+
+  else if (athMarketCap >= 1_000_000) breakdown.traction = 22;   // $1M+
+  else if (athMarketCap >= 500_000) breakdown.traction = 18;     // $500K+
+  else if (athMarketCap >= 100_000) breakdown.traction = 14;     // $100K+
+  else if (athMarketCap >= 50_000) breakdown.traction = 10;      // $50K+
+  else if (athMarketCap >= 20_000) breakdown.traction = 6;       // $20K+
+  else if (athMarketCap >= 10_000) breakdown.traction = 3;       // $10K+ (just migrated)
 
-  // 3. Holder Retention (+1 to +20)
-  if (input.holderCount && input.holderCountAtAth && input.holderCountAtAth > 0) {
-    const retentionRate = input.holderCount / input.holderCountAtAth;
-    breakdown.holderRetention = Math.min(
-      SCORE_CONSTANTS.HOLDER_RETENTION_MAX_SCORE,
-      Math.floor(retentionRate * SCORE_CONSTANTS.HOLDER_RETENTION_MAX_SCORE)
-    );
-  } else {
-    // Fetch current holder count if not provided
+  // ========== HOLDER RETENTION (0-20 points) ==========
+  let holderCount = input.holderCount || 0;
+  if (!holderCount && input.mintAddress) {
     try {
-      const holdersData = await getTokenHolders(input.mintAddress);
-      // Without ATH data, give partial credit based on current holder count
-      // 1 point per 100 holders, max 20
-      breakdown.holderRetention = Math.min(
-        SCORE_CONSTANTS.HOLDER_RETENTION_MAX_SCORE,
-        Math.floor(holdersData.totalHolders / 100)
-      );
+      // Use smart function that paginates until 5000+ confirmed (max tier)
+      holderCount = await getHolderCountForScoring(input.mintAddress);
     } catch {
-      // API error - no points
-      breakdown.holderRetention = 0;
+      holderCount = 0;
     }
   }
 
-  // 4. Dev Didn't Dump (+1 to +20)
-  try {
-    const dumpSeverity = await analyzeDevSellPattern(input.creatorWallet, input.mintAddress);
-    breakdown.devBehavior = Math.max(
-      0,
-      SCORE_CONSTANTS.DEV_BEHAVIOR_MAX_SCORE - dumpSeverity
-    );
-  } catch {
-    // Give benefit of the doubt if we can't analyze
-    breakdown.devBehavior = Math.floor(SCORE_CONSTANTS.DEV_BEHAVIOR_MAX_SCORE / 2);
-  }
+  if (holderCount >= 5000) breakdown.holderRetention = 20;
+  else if (holderCount >= 1000) breakdown.holderRetention = 15;
+  else if (holderCount >= 500) breakdown.holderRetention = 10;
+  else if (holderCount >= 100) breakdown.holderRetention = 5;
+  else if (holderCount >= 50) breakdown.holderRetention = 2;
 
-  // 5. Bundle % Low (+1 to +15)
-  if (input.bundlePercent !== undefined) {
-    breakdown.bundleBehavior = calculateBundleScore(input.bundlePercent);
-  } else {
-    // Default to mid-range if unknown
-    breakdown.bundleBehavior = Math.floor(SCORE_CONSTANTS.BUNDLE_MAX_SCORE / 2);
-  }
+  // ========== DEV BEHAVIOR (0-15 points) ==========
+  // Based on how much dev still holds (less is better, but 0 is neutral)
+  const devHoldingPercent = input.devHoldingPercent ?? 10; // Assume 10% if unknown
+  if (devHoldingPercent >= 50) breakdown.devBehavior = 0;       // Holding too much = suspicious
+  else if (devHoldingPercent >= 20) breakdown.devBehavior = 5;  // Still holding significant
+  else if (devHoldingPercent >= 5) breakdown.devBehavior = 10;  // Reasonable hold
+  else if (devHoldingPercent >= 1) breakdown.devBehavior = 15;  // Distributed well
+  else breakdown.devBehavior = 10; // Fully sold (neutral - could be good or bad)
 
-  // 6. Longevity (+1 to +10)
-  const daysActive = Math.floor(
-    (Date.now() - input.launchDate.getTime()) / (1000 * 60 * 60 * 24)
-  );
-  breakdown.longevity = Math.min(
-    SCORE_CONSTANTS.LONGEVITY_MAX_SCORE,
-    Math.floor(daysActive / SCORE_CONSTANTS.LONGEVITY_DAYS_PER_POINT)
-  );
-
-  // 7. Community exists (+1 to +5)
-  if (input.communityActive) {
-    breakdown.community = SCORE_CONSTANTS.COMMUNITY_MAX_SCORE;
-  }
-
-  // 8. Rug penalty (-100)
-  if (input.isRugged) {
-    breakdown.rugPenalty = SCORE_CONSTANTS.RUG_PENALTY;
-  }
+  // ========== LONGEVITY (0-10 points) ==========
+  const ageInDays = (Date.now() - input.launchDate.getTime()) / (1000 * 60 * 60 * 24);
+  if (ageInDays >= 90) breakdown.longevity = 10;      // 3+ months
+  else if (ageInDays >= 30) breakdown.longevity = 7;  // 1+ month
+  else if (ageInDays >= 7) breakdown.longevity = 4;   // 1+ week
+  else if (ageInDays >= 1) breakdown.longevity = 1;   // 1+ day
 
   // Calculate total
-  breakdown.total = Math.max(
-    0,
-    Math.min(
-      SCORE_CONSTANTS.MAX_TOKEN_SCORE,
-      breakdown.migration +
-      breakdown.athMarketCap +
-      breakdown.holderRetention +
-      breakdown.devBehavior +
-      breakdown.bundleBehavior +
-      breakdown.longevity +
-      breakdown.community +
-      breakdown.rugPenalty
-    )
+  breakdown.total = Math.min(
+    SCORE_CONSTANTS.MAX_TOKEN_SCORE,
+    breakdown.migration +
+    breakdown.traction +
+    breakdown.holderRetention +
+    breakdown.devBehavior +
+    breakdown.longevity
   );
 
   return { score: breakdown.total, breakdown };
 }
 
 /**
- * Analyze dev wallet sell pattern to detect dumps
- * Returns severity score 0-20 (0 = no dump, 20 = severe dump)
+ * Calculate scores for multiple tokens with batched API calls
  */
-async function analyzeDevSellPattern(
-  devWallet: string,
-  mintAddress: string
-): Promise<number> {
-  const transfers = await getTokenTransfersForWallet(devWallet, mintAddress, { limit: 100 });
-
-  if (transfers.length === 0) {
-    return 0; // No transfers = no dump
+export async function calculateTokenScoresBatch(
+  inputs: TokenScoreInput[]
+): Promise<Array<{
+  mintAddress: string;
+  score: number;
+  breakdown: TokenScoreBreakdown;
+}>> {
+  if (inputs.length === 0) {
+    return [];
   }
 
-  let totalReceived = 0;
-  let totalSent = 0;
+  // Pre-fetch holder counts for all tokens that don't have them
+  const mintsNeedingHolders = inputs
+    .filter(i => !i.holderCount)
+    .map(i => i.mintAddress);
 
-  for (const tx of transfers) {
-    for (const transfer of tx.tokenTransfers) {
-      if (transfer.mint !== mintAddress) continue;
+  const holderCounts = mintsNeedingHolders.length > 0
+    ? await batchGetHolderCountsQuick(mintsNeedingHolders)
+    : new Map<string, number>();
 
-      if (transfer.to === devWallet) {
-        totalReceived += transfer.amount;
-      } else if (transfer.from === devWallet) {
-        totalSent += transfer.amount;
-      }
-    }
-  }
+  // Calculate scores with pre-fetched holder data
+  const results = await Promise.all(
+    inputs.map(async (input) => {
+      const holderCount = input.holderCount || holderCounts.get(input.mintAddress) || 0;
+      const result = await calculateTokenScore({
+        ...input,
+        holderCount,
+      });
+      return {
+        mintAddress: input.mintAddress,
+        ...result,
+      };
+    })
+  );
 
-  if (totalReceived === 0) {
-    return 0;
-  }
-
-  const sellPercent = (totalSent / totalReceived) * 100;
-
-  if (sellPercent >= SCORE_CONSTANTS.DEV_DUMP_SEVERE_THRESHOLD) {
-    return 20; // Severe dump
-  } else if (sellPercent >= SCORE_CONSTANTS.DEV_DUMP_THRESHOLD_PERCENT) {
-    return 15; // Significant dump
-  } else if (sellPercent >= 30) {
-    return 10; // Moderate selling
-  } else if (sellPercent >= 10) {
-    return 5; // Light selling (acceptable)
-  }
-
-  return 0; // Minimal selling
-}
-
-/**
- * Calculate bundle score based on bundle percentage
- */
-function calculateBundleScore(bundlePercent: number): number {
-  if (bundlePercent < SCORE_CONSTANTS.BUNDLE_EXCELLENT_THRESHOLD) {
-    return SCORE_CONSTANTS.BUNDLE_MAX_SCORE; // <5% = full points
-  } else if (bundlePercent < SCORE_CONSTANTS.BUNDLE_GOOD_THRESHOLD) {
-    return 10; // 5-10% = 10 points
-  } else if (bundlePercent < SCORE_CONSTANTS.BUNDLE_ACCEPTABLE_THRESHOLD) {
-    return 5; // 10-20% = 5 points
-  }
-  return 0; // >20% = no points
+  return results;
 }
 
 /**
  * Calculate overall dev score from all their tokens
- * Returns score (0-740) with tier and breakdown
+ * Uses weighted average where better tokens count more
  */
 export function calculateDevScore(input: DevScoreInput): DevScoreResult {
   const { tokens, walletCount, accountCreatedAt } = input;
+  const accountAgeMonths = getMonthsOld(accountCreatedAt);
 
+  // No tokens = unverified with 0 score
   if (tokens.length === 0) {
     return {
       score: 0,
       tier: walletCount > 0 ? 'verified' : 'unverified',
       breakdown: {
+        baseScore: 0,
         tokenCount: 0,
         migrationCount: 0,
+        migrationBonus: 0,
+        marketCapBonus: 0,
+        tokenScoreBonus: 0,
+        rugPenalties: 0,
+        rugCount: 0,
+        hardRugCount: 0,
+        accountAgeMonths,
         averageTokenScore: 0,
-        weightedScore: 0,
-        accountAgeMonths: getMonthsOld(accountCreatedAt),
       },
     };
   }
 
-  const totalScore = tokens.reduce((sum, t) => sum + t.score, 0);
-  const averageScore = totalScore / tokens.length;
-  const migrationCount = tokens.filter(t => t.migrated).length;
+  // Separate valid tokens from rugged ones
+  const validTokens = tokens.filter(t => t.status !== 'rug' && t.score >= 0);
+  const ruggedTokens = tokens.filter(t => t.status === 'rug' || t.score < 0);
+  const hardRugCount = ruggedTokens.filter(t => t.rugSeverity === 'hard').length;
 
-  // Weight by number of tokens (more launches = more reliable data)
-  const tokenWeight = Math.min(1, tokens.length / SCORE_CONSTANTS.MIN_TOKENS_FOR_FULL_WEIGHT);
-  const weightedScore = averageScore * tokenWeight;
+  const migrationCount = validTokens.filter(t => t.migrated).length;
+  const totalTokenScore = validTokens.reduce((sum, t) => sum + Math.max(0, t.score), 0);
+  const averageTokenScore = validTokens.length > 0 ? totalTokenScore / validTokens.length : 0;
 
-  // Convert to 740 scale
-  const finalScore = Math.min(
-    SCORE_CONSTANTS.MAX_DEV_SCORE,
-    Math.round(weightedScore * SCORE_CONSTANTS.DEV_SCORE_MULTIPLIER)
+  // Calculate weighted token score contribution
+  // Better tokens get more weight
+  let weightedSum = 0;
+  let totalWeight = 0;
+  for (const token of validTokens) {
+    const weight = Math.max(1, token.score / 10); // Min weight of 1
+    weightedSum += token.score * weight;
+    totalWeight += weight;
+  }
+  const weightedAverage = totalWeight > 0 ? weightedSum / totalWeight : 0;
+
+  // Base score from weighted average (scale to 0-550 range)
+  const baseScore = Math.round(weightedAverage * SCORE_CONSTANTS.BASE_MULTIPLIER);
+
+  // Migration bonuses: big bonus for first, smaller for subsequent
+  let migrationBonus = 0;
+  if (migrationCount >= 1) {
+    migrationBonus = SCORE_CONSTANTS.FIRST_MIGRATION_BONUS; // First migration: +75
+    if (migrationCount > 1) {
+      migrationBonus += (migrationCount - 1) * SCORE_CONSTANTS.MIGRATION_BONUS; // Additional: +25 each
+    }
+  }
+
+  // Market cap bonuses
+  let marketCapBonus = 0;
+  for (const token of validTokens) {
+    if (token.athMarketCap) {
+      if (token.athMarketCap >= 10_000_000) marketCapBonus += SCORE_CONSTANTS.MCAP_10M_BONUS;
+      else if (token.athMarketCap >= 1_000_000) marketCapBonus += SCORE_CONSTANTS.MCAP_1M_BONUS;
+      else if (token.athMarketCap >= 500_000) marketCapBonus += SCORE_CONSTANTS.MCAP_500K_BONUS;
+      else if (token.athMarketCap >= 100_000) marketCapBonus += SCORE_CONSTANTS.MCAP_100K_BONUS;
+    }
+  }
+
+  // Rug penalties (severe)
+  const rugPenalties = ruggedTokens.length * SCORE_CONSTANTS.DEV_RUG_PENALTY;
+
+  // Calculate final score
+  let score = baseScore + migrationBonus + marketCapBonus - rugPenalties;
+
+  // Clamp to bounds
+  score = Math.max(
+    SCORE_CONSTANTS.FLOOR_DEV_SCORE,
+    Math.min(SCORE_CONSTANTS.MAX_DEV_SCORE, score)
   );
 
-  const accountAgeMonths = getMonthsOld(accountCreatedAt);
+  // Find max ATH market cap across all tokens
+  const maxAthMarketCap = Math.max(0, ...validTokens.map(t => t.athMarketCap || 0));
 
   // Determine tier
   const tier = determineTier({
-    score: finalScore,
+    score,
     migrationCount,
     tokenCount: tokens.length,
     walletCount,
     accountAgeMonths,
+    rugCount: ruggedTokens.length,
+    maxAthMarketCap,
   });
 
   return {
-    score: finalScore,
+    score: Math.round(score),
     tier,
     breakdown: {
+      baseScore,
       tokenCount: tokens.length,
       migrationCount,
-      averageTokenScore: Math.round(averageScore),
-      weightedScore: Math.round(weightedScore),
+      migrationBonus,
+      marketCapBonus,
+      tokenScoreBonus: Math.round(weightedAverage),
+      rugPenalties,
+      rugCount: ruggedTokens.length,
+      hardRugCount,
       accountAgeMonths,
+      averageTokenScore: Math.round(averageTokenScore),
     },
   };
 }
@@ -358,10 +398,17 @@ function determineTier(metrics: {
   tokenCount: number;
   walletCount: number;
   accountAgeMonths: number;
+  rugCount: number;
+  maxAthMarketCap: number;
 }): DevTier {
-  const { score, migrationCount, tokenCount, walletCount, accountAgeMonths } = metrics;
+  const { score, migrationCount, tokenCount, walletCount, accountAgeMonths, rugCount, maxAthMarketCap } = metrics;
 
-  // Legend: 720+ score, 5+ migrations, 6+ months
+  // Penalized: Has rugs and score below threshold
+  if (rugCount > 0 && score < TIER_THRESHOLDS.VERIFIED.minScore) {
+    return 'penalized';
+  }
+
+  // Legend: 700+ score, 5+ migrations, 6+ months
   if (
     score >= TIER_THRESHOLDS.LEGEND.minScore &&
     migrationCount >= TIER_THRESHOLDS.LEGEND.minMigrations &&
@@ -370,7 +417,7 @@ function determineTier(metrics: {
     return 'legend';
   }
 
-  // Elite: 700+ score, 3+ migrations
+  // Elite: 600+ score, 3+ migrations
   if (
     score >= TIER_THRESHOLDS.ELITE.minScore &&
     migrationCount >= TIER_THRESHOLDS.ELITE.minMigrations
@@ -378,19 +425,38 @@ function determineTier(metrics: {
     return 'elite';
   }
 
-  // Proven: 1+ migration
-  if (migrationCount >= TIER_THRESHOLDS.PROVEN.minMigrations) {
+  // Rising Star: 500+ score, at least one $500K+ launch (exceptional single launch)
+  if (
+    score >= TIER_THRESHOLDS.RISING_STAR.minScore &&
+    maxAthMarketCap >= TIER_THRESHOLDS.RISING_STAR.minMcap
+  ) {
+    return 'rising_star';
+  }
+
+  // Proven: 450+ score, 1+ migration
+  if (
+    score >= TIER_THRESHOLDS.PROVEN.minScore &&
+    migrationCount >= TIER_THRESHOLDS.PROVEN.minMigrations
+  ) {
     return 'proven';
   }
 
-  // Builder: 3+ tokens
-  if (tokenCount >= TIER_THRESHOLDS.BUILDER.minTokens) {
+  // Builder: 300+ score, 3+ tokens
+  if (
+    score >= TIER_THRESHOLDS.BUILDER.minScore &&
+    tokenCount >= TIER_THRESHOLDS.BUILDER.minTokens
+  ) {
     return 'builder';
   }
 
-  // Verified: 1+ wallet
-  if (walletCount >= TIER_THRESHOLDS.VERIFIED.minWallets) {
+  // Verified: 150+ score
+  if (score >= TIER_THRESHOLDS.VERIFIED.minScore) {
     return 'verified';
+  }
+
+  // Below 150 with wallets
+  if (walletCount > 0) {
+    return rugCount > 0 ? 'penalized' : 'verified';
   }
 
   return 'unverified';
@@ -418,27 +484,37 @@ export function getTierInfo(tier: DevTier): {
     legend: {
       name: 'Legend',
       color: '#FFD700', // Gold
-      description: '5+ migrations, 720+ score, 6+ months',
+      description: '5+ migrations, 700+ score, 6+ months',
     },
     elite: {
       name: 'Elite',
       color: '#9B59B6', // Purple
-      description: '3+ migrations, 700+ score',
+      description: '3+ migrations, 600+ score',
+    },
+    rising_star: {
+      name: 'Rising Star',
+      color: '#F59E0B', // Amber/Orange
+      description: 'Exceptional launch ($500K+ ATH)',
     },
     proven: {
       name: 'Proven',
       color: '#27AE60', // Green
-      description: '1+ successful migration',
+      description: '1+ migration, 450+ score',
     },
     builder: {
       name: 'Builder',
       color: '#3498DB', // Blue
-      description: '3+ tokens launched',
+      description: '3+ tokens, 300+ score',
     },
     verified: {
       name: 'Verified',
       color: '#95A5A6', // Gray
-      description: 'Wallet verified',
+      description: 'Wallet verified, 150+ score',
+    },
+    penalized: {
+      name: 'Penalized',
+      color: '#8B0000', // Dark Red
+      description: 'Has rug history',
     },
     unverified: {
       name: 'Unverified',
@@ -452,7 +528,6 @@ export function getTierInfo(tier: DevTier): {
 
 /**
  * Quick score estimation without full API calls
- * Useful for batch processing or previews
  */
 export function estimateTokenScore(params: {
   migrated: boolean;
@@ -461,34 +536,76 @@ export function estimateTokenScore(params: {
   daysOld: number;
   isRugged: boolean;
 }): number {
+  if (params.isRugged) {
+    return -100;
+  }
+
   let score = 0;
 
+  // Migration (0-30)
   if (params.migrated) {
-    score += SCORE_CONSTANTS.MIGRATION_BONUS;
+    score += 30;
   }
 
-  score += Math.min(
-    SCORE_CONSTANTS.ATH_MAX_SCORE,
-    Math.floor(params.marketCap / SCORE_CONSTANTS.ATH_DIVISOR)
-  );
+  // Traction (0-25)
+  if (params.marketCap >= 10_000_000) score += 25;
+  else if (params.marketCap >= 1_000_000) score += 22;
+  else if (params.marketCap >= 500_000) score += 18;
+  else if (params.marketCap >= 100_000) score += 14;
+  else if (params.marketCap >= 50_000) score += 10;
+  else if (params.marketCap >= 20_000) score += 6;
+  else if (params.marketCap >= 10_000) score += 3;
 
-  score += Math.min(
-    SCORE_CONSTANTS.HOLDER_RETENTION_MAX_SCORE,
-    Math.floor(params.holderCount / 100)
-  );
+  // Holder retention (0-20)
+  if (params.holderCount >= 5000) score += 20;
+  else if (params.holderCount >= 1000) score += 15;
+  else if (params.holderCount >= 500) score += 10;
+  else if (params.holderCount >= 100) score += 5;
+  else if (params.holderCount >= 50) score += 2;
 
-  score += Math.min(
-    SCORE_CONSTANTS.LONGEVITY_MAX_SCORE,
-    Math.floor(params.daysOld / SCORE_CONSTANTS.LONGEVITY_DAYS_PER_POINT)
-  );
+  // Dev behavior - assume neutral (10)
+  score += 10;
 
-  // Assume average for unknown factors
-  score += Math.floor(SCORE_CONSTANTS.DEV_BEHAVIOR_MAX_SCORE / 2);
-  score += Math.floor(SCORE_CONSTANTS.BUNDLE_MAX_SCORE / 2);
+  // Longevity (0-10)
+  if (params.daysOld >= 90) score += 10;
+  else if (params.daysOld >= 30) score += 7;
+  else if (params.daysOld >= 7) score += 4;
+  else if (params.daysOld >= 1) score += 1;
 
-  if (params.isRugged) {
-    score += SCORE_CONSTANTS.RUG_PENALTY;
-  }
-
-  return Math.max(0, Math.min(SCORE_CONSTANTS.MAX_TOKEN_SCORE, score));
+  return Math.min(SCORE_CONSTANTS.MAX_TOKEN_SCORE, score);
 }
+
+/**
+ * Quick dev score estimation
+ */
+export function estimateDevScore(params: {
+  tokenCount: number;
+  migrationCount: number;
+  avgTokenScore: number;
+  rugCount?: number;
+  hardRugCount?: number;
+}): number {
+  // Base from average token score (scaled to 0-550)
+  let score = params.avgTokenScore * SCORE_CONSTANTS.BASE_MULTIPLIER;
+
+  // Migration bonus: first migration worth more
+  if (params.migrationCount >= 1) {
+    score += SCORE_CONSTANTS.FIRST_MIGRATION_BONUS;
+    if (params.migrationCount > 1) {
+      score += (params.migrationCount - 1) * SCORE_CONSTANTS.MIGRATION_BONUS;
+    }
+  }
+
+  // Rug penalties
+  if (params.rugCount) {
+    score -= params.rugCount * SCORE_CONSTANTS.DEV_RUG_PENALTY;
+  }
+
+  return Math.max(
+    SCORE_CONSTANTS.FLOOR_DEV_SCORE,
+    Math.min(SCORE_CONSTANTS.MAX_DEV_SCORE, Math.round(score))
+  );
+}
+
+// Export constants for use in other modules
+export { SCORE_CONSTANTS };
