@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useSession } from 'next-auth/react';
 import { Wallet, Star, Trash2, Plus, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
 import { WalletConnect } from './WalletConnect';
+import { useWalletAuth } from '@/components/providers/AuthProvider';
 
 interface WalletData {
   id: string;
@@ -25,7 +25,7 @@ interface WalletListProps {
 }
 
 export function WalletList({ profileUserId, wallets: initialWallets, onWalletsChanged }: WalletListProps) {
-  const { data: session } = useSession();
+  const { user, loading: authLoading } = useWalletAuth();
   const [wallets, setWallets] = useState<WalletData[]>([]);
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -33,7 +33,7 @@ export function WalletList({ profileUserId, wallets: initialWallets, onWalletsCh
   const [success, setSuccess] = useState<string | null>(null);
   const [showAddWallet, setShowAddWallet] = useState(false);
 
-  const isOwnProfile = session?.user?.id === profileUserId;
+  const isOwnProfile = user?.id === profileUserId;
 
   const fetchWallets = useCallback(async () => {
     if (!isOwnProfile) return;
@@ -128,7 +128,7 @@ export function WalletList({ profileUserId, wallets: initialWallets, onWalletsCh
   // For non-owners, show a simple read-only list
   if (!isOwnProfile) {
     return (
-      <div className="border-2 border-dark/30 bg-white p-4">
+      <div className="border-2 border-dark/30 bg-card p-4">
         <h3 className="font-bold text-sm uppercase tracking-wider mb-3 flex items-center gap-2 text-dark">
           <Wallet size={16} />
           Linked Wallets ({initialWallets.length})
@@ -150,7 +150,7 @@ export function WalletList({ profileUserId, wallets: initialWallets, onWalletsCh
 
   // Owner view with management capabilities
   return (
-    <div className="border-2 border-dark/30 bg-white p-6">
+    <div className="border-2 border-dark/30 bg-card p-6">
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-bold text-sm uppercase tracking-wider flex items-center gap-2 text-dark">
           <Wallet size={16} />
@@ -166,14 +166,14 @@ export function WalletList({ profileUserId, wallets: initialWallets, onWalletsCh
       </div>
 
       {error && (
-        <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 text-red-400 text-sm flex items-center gap-2">
+        <div className="mb-4 p-3 bg-error-light border border-error-border text-error text-sm flex items-center gap-2">
           <AlertCircle size={16} />
           {error}
         </div>
       )}
 
       {success && (
-        <div className="mb-4 p-3 bg-green-500/10 border border-green-500/30 text-green-400 text-sm flex items-center gap-2">
+        <div className="mb-4 p-3 bg-success-light border border-success-border text-success text-sm flex items-center gap-2">
           <CheckCircle size={16} />
           {success}
         </div>
@@ -224,7 +224,7 @@ export function WalletList({ profileUserId, wallets: initialWallets, onWalletsCh
                 <button
                   onClick={() => handleRemoveWallet(wallet.id)}
                   disabled={actionLoading === wallet.id}
-                  className="text-red-400 hover:text-red-300 disabled:opacity-50 p-1"
+                  className="text-error hover:text-error/80 disabled:opacity-50 p-1"
                   title="Remove wallet"
                 >
                   {actionLoading === wallet.id ? (
@@ -260,7 +260,7 @@ export function WalletList({ profileUserId, wallets: initialWallets, onWalletsCh
             onClick={() => setShowAddWallet(false)}
           />
           <div className="relative w-full max-w-md">
-            <div className="bg-white border-2 border-dark shadow-[8px_8px_0px_0px_#3B3B3B]">
+            <div className="bg-card border-2 border-border shadow-[8px_8px_0px_0px_var(--border)]">
               <div className="flex items-center justify-between p-4 border-b-2 border-dark/30">
                 <h3 className="font-bold uppercase tracking-wider text-dark">Add Another Wallet</h3>
                 <button

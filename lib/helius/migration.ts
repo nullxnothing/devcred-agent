@@ -22,9 +22,13 @@ async function getMigratedTokensFromSwapHistoryLegacy(
   let before: string | undefined;
   let hasMore = true;
   let totalTxFetched = 0;
-  const MAX_TX_TO_SCAN = 1000;
+  const MAX_TX_TO_SCAN = 200; // Reduced from 1000 - most migrations happen in first 200 txs
 
   while (hasMore && totalTxFetched < MAX_TX_TO_SCAN) {
+    // Early exit if we've found all tokens we're looking for
+    if (migratedTokens.size >= tokenMints.size) {
+      break;
+    }
     let url = `${HELIUS_API_URL}/addresses/${walletAddress}/transactions?api-key=${process.env.HELIUS_API_KEY}&limit=100&type=SWAP`;
     if (before) {
       url += `&before=${before}`;

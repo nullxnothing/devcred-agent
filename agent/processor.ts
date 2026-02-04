@@ -8,6 +8,8 @@ import { QueuedWallet } from './types';
 import { scanWalletQuick, WalletScanResult } from '@/lib/wallet-scan';
 import { getOrCreateSystemUser, upsertToken, updateUser, getTokensByCreatorWallet } from '@/lib/db';
 import { checkAndPostAlerts } from './alerts';
+import { invalidateWalletCache as invalidateDbWalletCache } from '@/lib/cache';
+import { invalidateWalletCache as invalidateTxCache } from '@/lib/helius';
 
 interface ProcessStats {
   processed: number;
@@ -105,13 +107,17 @@ async function persistScanResult(
       migrated: token.migrated,
       migrated_at: token.migrated ? new Date().toISOString() : null,
       current_market_cap: token.marketCap,
-      ath_market_cap: token.marketCap, // Use current as ATH for now
+      ath_market_cap: token.marketCap, // DB will keep higher via GREATEST()
       holder_count: token.currentHolders,
       status: token.isRugged ? 'rug' : 'active',
       score: token.score.total,
       dev_sell_percent: token.devHoldingPercent,
     });
   }
+
+  // Invalidate caches after persisting to ensure fresh data on next request
+  await invalidateDbWalletCache(wallet.address).catch(() => {});
+  invalidateTxCache(wallet.address);
 }
 
 /**

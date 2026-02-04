@@ -7,9 +7,9 @@ export default function PublicLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-cream text-dark font-sans selection:bg-accent selection:text-white">
+    <div className="min-h-screen bg-cream text-dark font-sans selection:bg-accent selection:text-cream">
       <Navbar />
-      <main>{children}</main>
+      <main id="main-content" tabIndex={-1}>{children}</main>
       <Footer />
     </div>
   );

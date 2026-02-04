@@ -19,13 +19,4 @@ export function getPumpFunProfileUrl(walletAddress: string): string {
   return `https://pump.fun/profile/${walletAddress}`;
 }
 
-/**
- * Check if a string looks like a Solana wallet address
- * (Base58, 32-44 characters)
- */
-export function isValidSolanaAddress(address: string): boolean {
-  if (!address || address.length < 32 || address.length > 44) return false;
-  // Base58 characters (no 0, O, I, l)
-  const base58Regex = /^[1-9A-HJ-NP-Za-km-z]+$/;
-  return base58Regex.test(address);
-}
+// Note: For address validation, use isValidSolanaAddress from '@/lib/validation/solana'

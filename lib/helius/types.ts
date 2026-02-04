@@ -1,5 +1,6 @@
 export interface HeliusAsset {
   id: string;
+  interface?: string; // e.g., 'FungibleToken', 'FungibleAsset', 'V1_NFT', 'ProgrammableNFT'
   content: {
     metadata: {
       name: string;

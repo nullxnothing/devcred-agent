@@ -1,6 +1,6 @@
 'use client';
 
-import { Shield, CheckCircle2, AlertTriangle, ExternalLink, Copy, Check, Star, Trophy, Flame, Rocket } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, ExternalLink, Copy, Check } from 'lucide-react';
 import { useState, useCallback } from 'react';
 import { getTokenScoreColor } from '@/lib/score-colors';
 
@@ -39,9 +39,8 @@ function formatDate(dateStr: string): string {
 export function TokenCard({ token }: TokenCardProps) {
   const [copied, setCopied] = useState(false);
   const score = typeof token.score === 'string' ? parseFloat(token.score) : token.score;
-  const isElite = score >= 90;
-  const isStrong = score >= 75 && score < 90;
   const isRug = token.status === 'rug';
+  const scoreColor = getTokenScoreColor(score);
 
   const handleCopy = useCallback(async () => {
     try {
@@ -56,120 +55,99 @@ export function TokenCard({ token }: TokenCardProps) {
   const dexScreenerUrl = `https://dexscreener.com/solana/${token.mint}`;
   const truncatedMint = `${token.mint.slice(0, 6)}...${token.mint.slice(-4)}`;
 
+  // Simplified card styling - consistent shadows, score color indicates quality
   const cardStyles = isRug
-    ? 'border-2 border-red-500/50 bg-white shadow-[4px_4px_0px_0px_#991B1B]'
-    : isElite
-    ? 'border-2 border-amber-500 bg-white shadow-[6px_6px_0px_0px_#D4AF37]'
-    : isStrong
-    ? 'border-2 border-orange-500 bg-white shadow-[4px_4px_0px_0px_#FF6D00]'
-    : 'border-2 border-dark/30 bg-white shadow-[4px_4px_0px_0px_#3B3B3B]';
+    ? 'border-2 border-error/40 bg-card shadow-[3px_3px_0px_0px_var(--score-danger)]'
+    : 'border-2 border-border bg-card shadow-[3px_3px_0px_0px_var(--border)]';
 
-  const stripGradient = isRug
-    ? 'bg-gradient-to-r from-red-600 to-red-500'
-    : isElite
-    ? 'bg-gradient-to-r from-amber-400 via-orange-500 to-amber-400'
-    : isStrong
-    ? 'bg-gradient-to-r from-orange-500 to-accent'
-    : score >= 50
-    ? 'bg-gradient-to-r from-accent to-accent/80'
-    : 'bg-gradient-to-r from-gray-600 to-gray-500';
+  // Subtle top accent strip based on score
+  const stripColor = isRug
+    ? 'bg-error'
+    : score >= 90
+    ? 'bg-score-legend'
+    : score >= 70
+    ? 'bg-accent'
+    : 'bg-dark/30';
 
   return (
-    <div className={`${cardStyles} hover:translate-x-1 hover:-translate-y-1 transition-transform relative overflow-hidden`}>
-      <div className={`h-1 ${stripGradient}`} />
+    <div className={`${cardStyles} lg:hover:translate-x-0.5 lg:hover:-translate-y-0.5 active:scale-[0.995] transition-transform relative overflow-hidden`}>
+      {/* Subtle top accent */}
+      <div className={`h-1 ${stripColor}`} />
 
-      {isElite && (
-        <div className="absolute top-1 right-0 bg-amber-500 text-dark text-[10px] font-black uppercase px-3 py-1 flex items-center gap-1">
-          <Trophy size={12} /> Elite
-        </div>
-      )}
-      {isStrong && !isElite && (
-        <div className="absolute top-1 right-0 bg-orange-500 text-dark text-[10px] font-black uppercase px-3 py-1 flex items-center gap-1">
-          <Rocket size={12} /> Strong
-        </div>
-      )}
-
-      <div className="p-6">
-        <div className="flex flex-col md:flex-row justify-between md:items-center gap-6">
-        <div className="flex-1">
-          <div className="flex items-center gap-3 mb-2 flex-wrap">
-            <h3 className="text-2xl font-bold text-dark">{token.name}</h3>
-            <span className="font-mono text-sm text-dark/60">${token.symbol}</span>
-            {token.status === 'active' ? (
-              <span className="flex items-center gap-1 text-green-400 text-xs font-bold uppercase border border-green-400 px-2 py-0.5 rounded-full">
-                <CheckCircle2 size={12} /> Active
-              </span>
-            ) : token.status === 'rug' ? (
-              <span className="flex items-center gap-1 text-red-400 text-xs font-bold uppercase border border-red-400 px-2 py-0.5 rounded-full">
-                <AlertTriangle size={12} /> Rug
-              </span>
-            ) : (
-              <span className="flex items-center gap-1 text-dark/50 text-xs font-bold uppercase border border-dark/30 px-2 py-0.5 rounded-full">
-                Inactive
-              </span>
-            )}
-            {token.migrated && (
-              <span className="flex items-center gap-1 text-accent text-xs font-bold uppercase border border-accent px-2 py-0.5 rounded-full">
-                Migrated
-              </span>
-            )}
-          </div>
-
-          <div className="flex items-center gap-3 mb-3">
-            <button
-              onClick={handleCopy}
-              className="inline-flex items-center gap-1.5 font-mono text-xs text-dark/60 hover:text-accent transition-colors cursor-pointer group"
-              title={`Click to copy: ${token.mint}`}
-            >
-              <span className="group-hover:underline">{truncatedMint}</span>
-              {copied ? (
-                <Check size={12} className="text-green-600" />
-              ) : (
-                <Copy size={12} className="opacity-50 group-hover:opacity-100" />
+      <div className="p-3 sm:p-4 md:p-5">
+        <div className="flex flex-col gap-3 sm:gap-4 sm:flex-row sm:justify-between sm:items-start">
+          <div className="flex-1 min-w-0">
+            {/* Token name and status row */}
+            <div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 flex-wrap">
+              <h3 className="text-base sm:text-lg md:text-xl font-bold text-dark truncate max-w-[200px] sm:max-w-none">{token.name}</h3>
+              <span className="font-mono text-xs sm:text-sm text-dark/50">${token.symbol}</span>
+              {token.status === 'active' && (
+                <span className="flex items-center gap-1 text-success text-[9px] sm:text-[10px] font-bold uppercase shrink-0">
+                  <CheckCircle2 size={10} /> Active
+                </span>
               )}
-            </button>
-            <a
-              href={dexScreenerUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-xs text-accent hover:underline"
-            >
-              DexScreener <ExternalLink size={12} />
-            </a>
-          </div>
+              {token.status === 'rug' && (
+                <span className="flex items-center gap-1 text-error text-[9px] sm:text-[10px] font-bold uppercase shrink-0">
+                  <AlertTriangle size={10} /> Rug
+                </span>
+              )}
+              {token.migrated && (
+                <span className="text-accent text-[9px] sm:text-[10px] font-bold uppercase shrink-0">
+                  Migrated
+                </span>
+              )}
+            </div>
 
-          <div className="flex gap-6 text-sm text-dark/70 flex-wrap">
-            <span>Launched: {formatDate(token.launchDate)}</span>
-            <span>MCap: {formatMarketCap(token.marketCap)}</span>
-            {token.athMarketCap && token.athMarketCap !== token.marketCap && (
-              <span className={isElite ? 'font-semibold text-amber-600' : ''}>ATH: {formatMarketCap(token.athMarketCap)}</span>
-            )}
-            <span>Vol 24h: {formatMarketCap(token.volume24h)}</span>
-            {token.totalVolume && (
-              <span>Total Vol: {formatMarketCap(token.totalVolume)}</span>
-            )}
-          </div>
-        </div>
+            <div className="flex items-center gap-2 sm:gap-3 mb-2 flex-wrap">
+              <button
+                onClick={handleCopy}
+                className="inline-flex items-center gap-1 sm:gap-1.5 font-mono text-[10px] sm:text-xs text-dark/60 hover:text-accent active:text-accent transition-colors cursor-pointer group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1 p-1 -m-1"
+                title={`Click to copy: ${token.mint}`}
+                aria-label={copied ? 'Contract address copied' : `Copy contract address ${truncatedMint}`}
+              >
+                <span className="group-hover:underline">{truncatedMint}</span>
+                {copied ? (
+                  <Check size={10} className="text-success sm:w-3 sm:h-3" aria-hidden="true" />
+                ) : (
+                  <Copy size={10} className="opacity-50 group-hover:opacity-100 sm:w-3 sm:h-3" aria-hidden="true" />
+                )}
+              </button>
+              <a
+                href={dexScreenerUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-[10px] sm:text-xs text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1 p-1 -m-1"
+                aria-label={`View ${token.name} on DexScreener (opens in new tab)`}
+              >
+                DexScreener <ExternalLink size={10} className="sm:w-3 sm:h-3" aria-hidden="true" />
+              </a>
+            </div>
 
-        <div className={`flex items-center gap-8 border-t md:border-t-0 md:border-l ${isElite ? 'border-amber-500/40' : 'border-dark/10'} pt-4 md:pt-0 md:pl-8`}>
-          <div className="text-center">
-            <div className={`text-xs uppercase font-bold ${isElite ? 'text-amber-600' : 'text-dark/50'}`}>Token Score</div>
-            <div className={`text-3xl font-black font-display-mock ${getTokenScoreColor(score).textClass}`}>
-              {Math.round(score)}
+            {/* Metadata row - compact */}
+            <div className="flex gap-2 sm:gap-3 md:gap-4 text-[10px] sm:text-xs text-dark/60 flex-wrap">
+              <span>{formatDate(token.launchDate)}</span>
+              <span>MCap: {formatMarketCap(token.marketCap)}</span>
+              {token.athMarketCap && token.athMarketCap !== token.marketCap && (
+                <span className="hidden xs:inline">ATH: {formatMarketCap(token.athMarketCap)}</span>
+              )}
+              <span>Vol: {formatMarketCap(token.volume24h)}</span>
             </div>
           </div>
-          <div className={`hidden md:flex w-12 h-12 rounded-full border-2 items-center justify-center ${
-            isRug
-              ? 'border-red-500 bg-red-500/10 text-red-500'
-              : isElite
-              ? 'border-amber-500 bg-amber-500 text-dark'
-              : isStrong
-              ? 'border-orange-500 bg-orange-500/10 text-orange-500'
-              : 'border-accent/50 bg-white'
-          }`}>
-            {isRug ? <AlertTriangle size={24} /> : isElite ? <Star size={24} fill="currentColor" /> : <Shield size={24} className="text-dark" />}
+
+          {/* Score section - simplified */}
+          <div className="flex items-center gap-3 sm:gap-4 border-t sm:border-t-0 sm:border-l border-dark/10 pt-3 sm:pt-0 sm:pl-4 md:pl-6 shrink-0">
+            <div className="text-center">
+              <div className="text-[9px] sm:text-[10px] uppercase font-bold text-dark/40 mb-0.5">Score</div>
+              <div className={`text-xl sm:text-2xl font-stat ${scoreColor.textClass}`} aria-label={`Token score: ${Math.round(score)} out of 150`}>
+                {Math.round(score)}
+              </div>
+            </div>
+            {isRug && (
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full border border-error-border bg-error-light flex items-center justify-center" role="img" aria-label="Warning: This token has been flagged as a rug pull">
+                <AlertTriangle size={14} className="text-error sm:w-4 sm:h-4" aria-hidden="true" />
+              </div>
+            )}
           </div>
-        </div>
         </div>
       </div>
     </div>

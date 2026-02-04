@@ -338,7 +338,12 @@ export async function upsertToken(token: NewToken): Promise<Token> {
        symbol = EXCLUDED.symbol,
        migrated = EXCLUDED.migrated,
        migrated_at = EXCLUDED.migrated_at,
-       ath_market_cap = EXCLUDED.ath_market_cap,
+       -- ATH tracking: keep the higher of existing or new market cap
+       ath_market_cap = GREATEST(
+         COALESCE(dk_tokens.ath_market_cap, 0),
+         COALESCE(EXCLUDED.ath_market_cap, 0),
+         COALESCE(EXCLUDED.current_market_cap, 0)
+       ),
        current_market_cap = EXCLUDED.current_market_cap,
        total_volume = EXCLUDED.total_volume,
        holder_count = EXCLUDED.holder_count,

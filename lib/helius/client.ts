@@ -7,6 +7,8 @@ import { rateLimitedFetchWithRetry, sleep } from './rate-limiter';
 
 export { sleep };
 
+const REQUEST_TIMEOUT_MS = 30000;
+
 function getHeliusRpcUrl(): string {
   return `https://mainnet.helius-rpc.com/?api-key=${process.env.HELIUS_API_KEY}`;
 }
@@ -14,43 +16,59 @@ function getHeliusRpcUrl(): string {
 export const HELIUS_API_URL = `https://api.helius.xyz/v0`;
 
 export async function heliusRpc<T>(method: string, params: Record<string, unknown>): Promise<T> {
-  const response = await rateLimitedFetchWithRetry(getHeliusRpcUrl(), {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      jsonrpc: '2.0',
-      id: 'devcred',
-      method,
-      params,
-    }),
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
-  const data = await response.json();
+  try {
+    const response = await rateLimitedFetchWithRetry(getHeliusRpcUrl(), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: 'devcred',
+        method,
+        params,
+      }),
+      signal: controller.signal,
+    });
 
-  if (data.error) {
-    throw new Error(`Helius RPC error: ${data.error.message}`);
+    const data = await response.json();
+
+    if (data.error) {
+      throw new Error(`Helius RPC error: ${data.error.message}`);
+    }
+
+    return data.result as T;
+  } finally {
+    clearTimeout(timeout);
   }
-
-  return data.result as T;
 }
 
 export async function heliusRpcArray<T>(method: string, params: unknown[]): Promise<T> {
-  const response = await rateLimitedFetchWithRetry(getHeliusRpcUrl(), {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      jsonrpc: '2.0',
-      id: 'devcred',
-      method,
-      params,
-    }),
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
-  const data = await response.json();
+  try {
+    const response = await rateLimitedFetchWithRetry(getHeliusRpcUrl(), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: 'devcred',
+        method,
+        params,
+      }),
+      signal: controller.signal,
+    });
 
-  if (data.error) {
-    throw new Error(`Helius RPC error: ${data.error.message}`);
+    const data = await response.json();
+
+    if (data.error) {
+      throw new Error(`Helius RPC error: ${data.error.message}`);
+    }
+
+    return data.result as T;
+  } finally {
+    clearTimeout(timeout);
   }
-
-  return data.result as T;
 }

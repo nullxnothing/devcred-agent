@@ -51,7 +51,7 @@ export default function DashboardPage() {
     return (
       <div className="min-h-[80vh] flex flex-col items-center justify-center p-6">
         <div className="flex flex-col items-center gap-4 max-w-md text-center">
-          <AlertCircle className="w-12 h-12 text-red-500" />
+          <AlertCircle className="w-12 h-12 text-error" />
           <h2 className="text-xl font-bold text-dark">Profile Error</h2>
           <p className="text-dark/60">
             We couldn&apos;t load your profile. Please try logging in again.

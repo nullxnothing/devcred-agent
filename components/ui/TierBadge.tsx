@@ -1,5 +1,6 @@
 'use client';
 
+import { Crown, Zap, Shield, Star, CheckCircle, AlertTriangle, HelpCircle } from 'lucide-react';
 import { DevTier } from '@/lib/scoring';
 
 interface TierBadgeProps {
@@ -10,68 +11,71 @@ interface TierBadgeProps {
   showGlow?: boolean;
 }
 
+// Icons for each tier - using cream for contrast on colored backgrounds (theme-aware)
+const tierIcons: Record<string, React.ReactNode> = {
+  legend: <Crown size={12} className="text-cream" />,
+  elite: <Zap size={12} className="text-cream/90" />,
+  rising_star: <Star size={12} className="text-cream/90" />,
+  proven: <Shield size={12} className="text-cream/90" />,
+  builder: <Star size={12} className="text-cream/90" />,
+  verified: <CheckCircle size={12} className="text-cream/80" />,
+  penalized: <AlertTriangle size={12} className="text-cream/90" />,
+  unverified: <HelpCircle size={12} className="text-dark/70" />,
+};
+
 const tierStyles: Record<string, {
-  gradient: string;
+  bg: string;
   shadow: string;
   textShadow: string;
   border: string;
-  icon?: string;
 }> = {
   legend: {
-    gradient: 'bg-gradient-to-r from-yellow-600 via-yellow-400 to-yellow-600',
-    shadow: 'shadow-[0_0_20px_rgba(255,215,0,0.5)]',
-    textShadow: 'drop-shadow-[0_0_8px_rgba(255,215,0,0.8)]',
-    border: 'border-yellow-400',
-    icon: '',
+    bg: 'bg-score-legend',
+    shadow: 'badge-glow-legend',
+    textShadow: '',
+    border: 'border-score-legend/80',
   },
   elite: {
-    gradient: 'bg-gradient-to-r from-purple-700 via-purple-500 to-purple-700',
-    shadow: 'shadow-[0_0_15px_rgba(155,89,182,0.5)]',
-    textShadow: 'drop-shadow-[0_0_6px_rgba(155,89,182,0.8)]',
-    border: 'border-purple-400',
-    icon: '',
+    bg: 'bg-score-elite',
+    shadow: '',
+    textShadow: '',
+    border: 'border-score-elite/80',
   },
   rising_star: {
-    gradient: 'bg-gradient-to-r from-amber-600 via-orange-400 to-amber-600',
-    shadow: 'shadow-[0_0_15px_rgba(245,158,11,0.5)]',
-    textShadow: 'drop-shadow-[0_0_6px_rgba(245,158,11,0.8)]',
-    border: 'border-amber-400',
-    icon: '',
+    bg: 'bg-score-rising',
+    shadow: '',
+    textShadow: '',
+    border: 'border-score-rising/80',
   },
   proven: {
-    gradient: 'bg-gradient-to-r from-green-700 via-green-500 to-green-700',
-    shadow: 'shadow-[0_0_12px_rgba(39,174,96,0.4)]',
+    bg: 'bg-score-proven',
+    shadow: '',
     textShadow: '',
-    border: 'border-green-500',
-    icon: '',
+    border: 'border-score-proven/80',
   },
   builder: {
-    gradient: 'bg-gradient-to-r from-blue-700 via-blue-500 to-blue-700',
-    shadow: 'shadow-[0_0_10px_rgba(52,152,219,0.3)]',
+    bg: 'bg-score-builder',
+    shadow: '',
     textShadow: '',
-    border: 'border-blue-500',
-    icon: '',
+    border: 'border-score-builder/80',
   },
   verified: {
-    gradient: 'bg-gradient-to-r from-gray-600 to-gray-500',
+    bg: 'bg-score-verified',
     shadow: '',
     textShadow: '',
-    border: 'border-gray-400',
-    icon: '',
+    border: 'border-score-verified/80',
   },
   penalized: {
-    gradient: 'bg-gradient-to-r from-red-900 to-red-800',
-    shadow: 'shadow-[0_0_10px_rgba(139,0,0,0.4)]',
-    textShadow: '',
-    border: 'border-red-700',
-    icon: '',
-  },
-  unverified: {
-    gradient: 'bg-gray-700',
+    bg: 'bg-score-penalized',
     shadow: '',
     textShadow: '',
-    border: 'border-gray-500',
-    icon: '',
+    border: 'border-score-penalized/80',
+  },
+  unverified: {
+    bg: 'bg-score-unverified',
+    shadow: '',
+    textShadow: '',
+    border: 'border-score-unverified/80',
   },
 };
 
@@ -84,25 +88,27 @@ const sizeClasses = {
 export function TierBadge({ tier, tierName, size = 'md', showGlow = true }: TierBadgeProps) {
   const normalizedTier = tier.toLowerCase().replace(' ', '_') as keyof typeof tierStyles;
   const style = tierStyles[normalizedTier] || tierStyles.unverified;
+  const icon = tierIcons[normalizedTier] || tierIcons.unverified;
+  // Only legend tier gets glow effect
+  const isLegend = normalizedTier === 'legend';
 
   return (
     <span
       className={`
-        inline-flex items-center gap-1.5
+        inline-flex items-center gap-1
         ${sizeClasses[size]}
-        ${style.gradient}
-        ${showGlow ? style.shadow : ''}
+        ${style.bg}
+        ${showGlow && isLegend ? 'animate-gold-glow' : ''}
+        ${showGlow && isLegend ? style.shadow : ''}
         border ${style.border}
         font-bold uppercase tracking-wider
-        text-white ${style.textShadow}
+        ${normalizedTier === 'unverified' ? 'text-dark' : 'text-cream'}
         rounded-sm
-        animate-gradient-x
       `}
-      style={{
-        backgroundSize: '200% 100%',
-      }}
+      role="status"
+      aria-label={`Developer tier: ${tierName}`}
     >
-      {style.icon && <span>{style.icon}</span>}
+      {icon}
       {tierName}
     </span>
   );

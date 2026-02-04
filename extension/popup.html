@@ -6,11 +6,11 @@
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
     body {
-      width: 260px;
+      width: 280px;
       padding: 16px;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: #0a0a12;
-      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      background: #0d0d14;
+      color: rgba(255,255,255,0.9);
     }
 
     .header {
@@ -19,63 +19,59 @@
       gap: 10px;
       margin-bottom: 16px;
       padding-bottom: 12px;
-      border-bottom: 1px solid rgba(255,255,255,0.08);
+      border-bottom: 1px solid rgba(255,255,255,0.1);
     }
 
-    .logo {
-      width: 28px;
-      height: 28px;
-      background: linear-gradient(135deg, #22c55e, #16a34a);
-      border-radius: 6px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 700;
-      font-size: 11px;
-    }
-
-    .title {
-      font-size: 15px;
-      font-weight: 600;
-    }
-
+    .logo { width: 32px; height: 32px; border-radius: 6px; }
+    .title { font-size: 18px; font-weight: 700; letter-spacing: -0.5px; }
     .version {
       font-size: 10px;
-      color: rgba(255,255,255,0.3);
+      color: rgba(255,255,255,0.4);
       margin-left: auto;
+      padding: 2px 6px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 4px;
     }
 
     .stats {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 8px;
+      gap: 10px;
       margin-bottom: 16px;
     }
 
     .stat {
       background: rgba(255,255,255,0.03);
-      border: 1px solid rgba(255,255,255,0.06);
-      padding: 10px;
-      border-radius: 6px;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 8px;
+      padding: 12px;
       text-align: center;
     }
 
     .stat-value {
-      font-size: 20px;
+      font-size: 24px;
       font-weight: 700;
-      color: #fff;
       font-variant-numeric: tabular-nums;
     }
-
     .stat-value.green { color: #22c55e; }
     .stat-value.red { color: #ef4444; }
 
     .stat-label {
-      font-size: 9px;
+      font-size: 10px;
       color: rgba(255,255,255,0.4);
       text-transform: uppercase;
       letter-spacing: 0.5px;
-      margin-top: 2px;
+      margin-top: 4px;
+    }
+
+    .section-title {
+      font-size: 10px;
+      font-weight: 700;
+      color: rgba(255,255,255,0.4);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+      margin-top: 16px;
     }
 
     .toggle-row {
@@ -84,66 +80,59 @@
       align-items: center;
       padding: 10px 12px;
       background: rgba(255,255,255,0.03);
-      border: 1px solid rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.08);
       border-radius: 6px;
-      margin-bottom: 6px;
+      margin-bottom: 8px;
     }
 
-    .toggle-label {
-      font-size: 12px;
-      color: rgba(255,255,255,0.8);
-    }
+    .toggle-label { font-size: 13px; font-weight: 500; }
+    .toggle-desc { font-size: 10px; color: rgba(255,255,255,0.4); margin-top: 2px; }
 
     .toggle {
       position: relative;
-      width: 36px;
-      height: 20px;
+      width: 40px;
+      height: 22px;
+      flex-shrink: 0;
     }
 
-    .toggle input {
-      opacity: 0;
-      width: 0;
-      height: 0;
-    }
+    .toggle input { opacity: 0; width: 0; height: 0; }
 
     .toggle-slider {
       position: absolute;
       cursor: pointer;
       inset: 0;
       background: rgba(255,255,255,0.15);
-      border-radius: 20px;
+      border-radius: 11px;
       transition: 0.2s;
     }
 
     .toggle-slider:before {
       position: absolute;
       content: "";
-      height: 14px;
-      width: 14px;
+      height: 16px;
+      width: 16px;
       left: 3px;
       bottom: 3px;
-      background: white;
+      background: rgba(255,255,255,0.6);
       border-radius: 50%;
       transition: 0.2s;
     }
 
-    .toggle input:checked + .toggle-slider {
-      background: #22c55e;
-    }
-
+    .toggle input:checked + .toggle-slider { background: #22c55e; }
     .toggle input:checked + .toggle-slider:before {
-      transform: translateX(16px);
+      transform: translateX(18px);
+      background: white;
     }
 
     .legend {
       margin-top: 16px;
       padding-top: 12px;
-      border-top: 1px solid rgba(255,255,255,0.08);
+      border-top: 1px solid rgba(255,255,255,0.1);
     }
 
     .legend-title {
-      font-size: 9px;
-      font-weight: 600;
+      font-size: 10px;
+      font-weight: 700;
       color: rgba(255,255,255,0.4);
       text-transform: uppercase;
       letter-spacing: 0.5px;
@@ -153,74 +142,66 @@
     .legend-item {
       display: flex;
       align-items: center;
-      gap: 8px;
-      font-size: 11px;
+      gap: 10px;
+      font-size: 12px;
+      margin-bottom: 8px;
       color: rgba(255,255,255,0.7);
-      margin-bottom: 6px;
     }
 
     .legend-light {
-      width: 8px;
-      height: 8px;
+      width: 10px;
+      height: 10px;
       border-radius: 50%;
       flex-shrink: 0;
     }
 
-    .green { background: #22c55e; box-shadow: 0 0 4px #22c55e; }
-    .yellow { background: #eab308; box-shadow: 0 0 4px #eab308; }
-    .orange { background: #f97316; box-shadow: 0 0 4px #f97316; }
-    .red { background: #ef4444; box-shadow: 0 0 4px #ef4444; }
+    .green { background: #22c55e; }
+    .yellow { background: #eab308; }
+    .orange { background: #f97316; }
+    .red { background: #ef4444; }
 
-    .legend-score {
-      color: rgba(255,255,255,0.4);
-      margin-left: auto;
-      font-size: 10px;
-    }
+    .legend-tier { font-weight: 500; }
+    .legend-score { color: rgba(255,255,255,0.4); margin-left: auto; font-size: 11px; }
 
     .footer {
       margin-top: 16px;
       padding-top: 12px;
-      border-top: 1px solid rgba(255,255,255,0.08);
+      border-top: 1px solid rgba(255,255,255,0.1);
       display: flex;
       justify-content: space-between;
       align-items: center;
     }
 
     .footer a {
-      color: rgba(255,255,255,0.5);
-      text-decoration: none;
-      font-size: 11px;
-      transition: color 0.15s;
-    }
-
-    .footer a:hover {
       color: #22c55e;
+      text-decoration: none;
+      font-size: 12px;
+      font-weight: 600;
+      transition: opacity 0.15s;
     }
+    .footer a:hover { opacity: 0.7; }
 
     .status {
       display: flex;
       align-items: center;
       gap: 6px;
-      font-size: 10px;
-      color: rgba(255,255,255,0.4);
+      font-size: 11px;
+      color: rgba(255,255,255,0.5);
     }
 
     .status-dot {
-      width: 6px;
-      height: 6px;
+      width: 8px;
+      height: 8px;
       border-radius: 50%;
       background: #22c55e;
     }
-
-    .status-dot.offline {
-      background: #ef4444;
-    }
+    .status-dot.offline { background: #ef4444; }
   </style>
 </head>
 <body>
   <div class="header">
-    <div class="logo">DC</div>
-    <div class="title">DevCred</div>
+    <img src="icons/icon32.png" alt="DevKarma" class="logo">
+    <div class="title">DevKarma</div>
     <span class="version">v1.0</span>
   </div>
 
@@ -235,16 +216,35 @@
     </div>
   </div>
 
+  <div class="section-title">Display Options</div>
+
   <div class="toggle-row">
-    <span class="toggle-label">Show Badges</span>
+    <div>
+      <div class="toggle-label">Full Card</div>
+      <div class="toggle-desc">Below DA section</div>
+    </div>
     <label class="toggle">
-      <input type="checkbox" id="enabled" checked>
+      <input type="checkbox" id="showCard" checked>
       <span class="toggle-slider"></span>
     </label>
   </div>
 
   <div class="toggle-row">
-    <span class="toggle-label">Auto-Scan</span>
+    <div>
+      <div class="toggle-label">Mini Badge</div>
+      <div class="toggle-desc">In header bar</div>
+    </div>
+    <label class="toggle">
+      <input type="checkbox" id="showBadge" checked>
+      <span class="toggle-slider"></span>
+    </label>
+  </div>
+
+  <div class="toggle-row">
+    <div>
+      <div class="toggle-label">Auto-Scan</div>
+      <div class="toggle-desc">Watch for page changes</div>
+    </div>
     <label class="toggle">
       <input type="checkbox" id="autoScan" checked>
       <span class="toggle-slider"></span>
@@ -255,22 +255,22 @@
     <div class="legend-title">Score Guide</div>
     <div class="legend-item">
       <span class="legend-light green"></span>
-      <span>Trusted</span>
+      <span class="legend-tier">Elite/Legend</span>
       <span class="legend-score">600+</span>
     </div>
     <div class="legend-item">
       <span class="legend-light yellow"></span>
-      <span>Caution</span>
+      <span class="legend-tier">Builder/Proven</span>
       <span class="legend-score">300-599</span>
     </div>
     <div class="legend-item">
       <span class="legend-light orange"></span>
-      <span>New</span>
+      <span class="legend-tier">Verified</span>
       <span class="legend-score">150-299</span>
     </div>
     <div class="legend-item">
       <span class="legend-light red"></span>
-      <span>Risky</span>
+      <span class="legend-tier">Risky/Penalized</span>
       <span class="legend-score">&lt;150</span>
     </div>
   </div>

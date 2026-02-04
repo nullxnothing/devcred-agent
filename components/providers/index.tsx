@@ -3,6 +3,8 @@
 import { ReactNode } from 'react';
 import { AuthProvider } from './AuthProvider';
 import { WalletProvider } from './WalletProvider';
+import { ThemeProvider } from './ThemeProvider';
+import { ToastProvider } from '@/components/ui/Toast';
 
 interface ProvidersProps {
   children: ReactNode;
@@ -10,10 +12,14 @@ interface ProvidersProps {
 
 export function Providers({ children }: ProvidersProps) {
   return (
-    <AuthProvider>
-      <WalletProvider>
-        {children}
-      </WalletProvider>
-    </AuthProvider>
+    <ThemeProvider>
+      <ToastProvider>
+        <AuthProvider>
+          <WalletProvider>
+            {children}
+          </WalletProvider>
+        </AuthProvider>
+      </ToastProvider>
+    </ThemeProvider>
   );
 }

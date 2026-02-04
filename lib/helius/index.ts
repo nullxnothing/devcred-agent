@@ -21,11 +21,7 @@ export {
   getAssetBatch,
   verifyTokenCreator,
   getTokensCreatedByWalletViaFeePayer,
-  getTokensFromTransactionHistory,
-  getAllTokensCreatedByWallet,
-  getTokensCreatedByWalletFast,
-  getTokensCreatedByWalletVerified,
-  hasTokenCreationHistory,
+  getWalletAssets,
 } from './token-scanner';
 
 export {
@@ -37,6 +33,7 @@ export {
   batchGetHolderCountsQuick,
   getDevHoldingPercent,
   batchGetDevHoldings,
+  hasMinimumHolders,
 } from './holder-analysis';
 
 export {
@@ -50,48 +47,9 @@ export {
   getTransactionsBySource,
 } from './migration';
 
-import type { TokenCreated, MigratedTokenInfo } from './types';
-
-export async function getTokensWithMigrationStatus(walletAddress: string): Promise<{
-  tokens: TokenCreated[];
-  migrated: Map<string, MigratedTokenInfo>;
-  totalTokens: number;
-  migratedCount: number;
-}> {
-  const { getAllTokensCreatedByWallet } = await import('./token-scanner');
-  const { getMigratedTokensFromSwapHistory } = await import('./migration');
-
-  const tokens = await getAllTokensCreatedByWallet(walletAddress);
-  const tokenMints = new Set(tokens.map(t => t.mintAddress));
-
-  const migrated = await getMigratedTokensFromSwapHistory(walletAddress, tokenMints);
-
-  return {
-    tokens,
-    migrated,
-    totalTokens: tokens.length,
-    migratedCount: migrated.size,
-  };
-}
-
-export async function getTokensCreatedByWalletVerifiedWithMigration(walletAddress: string): Promise<{
-  tokens: TokenCreated[];
-  migrated: Map<string, MigratedTokenInfo>;
-  totalTokens: number;
-  migratedCount: number;
-}> {
-  const { getTokensCreatedByWalletVerified } = await import('./token-scanner');
-  const { getMigratedTokensFromSwapHistory } = await import('./migration');
-
-  const tokens = await getTokensCreatedByWalletVerified(walletAddress);
-  const tokenMints = new Set(tokens.map(t => t.mintAddress));
-
-  const migrated = await getMigratedTokensFromSwapHistory(walletAddress, tokenMints);
-
-  return {
-    tokens,
-    migrated,
-    totalTokens: tokens.length,
-    migratedCount: migrated.size,
-  };
-}
+export {
+  getCachedWalletTransactions,
+  invalidateWalletCache,
+  clearTxCache,
+  getTxCacheStats,
+} from './tx-cache';

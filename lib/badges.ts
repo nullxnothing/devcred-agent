@@ -183,43 +183,63 @@ export const BADGE_DEFINITIONS: Record<BadgeType, {
 };
 
 /**
- * Tier styling configuration
+ * Tier styling configuration - DevKarma brand aligned
+ * Uses sharp edges and brand-consistent colors
  */
 export const TIER_STYLES: Record<BadgeTier, {
-  gradient: string;
+  bg: string;
   border: string;
   shadow: string;
   textColor: string;
+  labelColor: string;
+  valueColor: string;
+  // Legacy gradient support
+  gradient: string;
 }> = {
   bronze: {
-    gradient: 'from-amber-700 via-amber-600 to-amber-700',
+    bg: 'bg-amber-800',
     border: 'border-amber-600',
-    shadow: 'shadow-[0_0_10px_rgba(180,83,9,0.3)]',
+    shadow: 'shadow-[2px_2px_0px_0px_rgba(180,83,9,0.5)]',
     textColor: 'text-amber-100',
+    labelColor: 'text-amber-700',
+    valueColor: 'text-amber-700',
+    gradient: 'from-amber-800 to-amber-700',
   },
   silver: {
-    gradient: 'from-slate-400 via-slate-300 to-slate-400',
-    border: 'border-slate-300',
-    shadow: 'shadow-[0_0_12px_rgba(148,163,184,0.4)]',
-    textColor: 'text-slate-900',
+    bg: 'bg-slate-500',
+    border: 'border-slate-400',
+    shadow: 'shadow-[2px_2px_0px_0px_rgba(100,116,139,0.5)]',
+    textColor: 'text-slate-100',
+    labelColor: 'text-slate-500',
+    valueColor: 'text-slate-600',
+    gradient: 'from-slate-500 to-slate-400',
   },
   gold: {
-    gradient: 'from-yellow-600 via-yellow-400 to-yellow-600',
-    border: 'border-yellow-400',
-    shadow: 'shadow-[0_0_15px_rgba(250,204,21,0.5)]',
-    textColor: 'text-yellow-900',
+    bg: 'bg-score-legend',
+    border: 'border-yellow-500',
+    shadow: 'shadow-[2px_2px_0px_0px_rgba(234,179,8,0.6)]',
+    textColor: 'text-yellow-950',
+    labelColor: 'text-yellow-600',
+    valueColor: 'text-yellow-600',
+    gradient: 'from-yellow-400 to-yellow-500',
   },
   platinum: {
-    gradient: 'from-cyan-400 via-teal-300 to-cyan-400',
-    border: 'border-teal-300',
-    shadow: 'shadow-[0_0_18px_rgba(45,212,191,0.5)]',
-    textColor: 'text-teal-900',
+    bg: 'bg-emerald-600',
+    border: 'border-emerald-400',
+    shadow: 'shadow-[2px_2px_0px_0px_rgba(16,185,129,0.5)]',
+    textColor: 'text-emerald-50',
+    labelColor: 'text-emerald-600',
+    valueColor: 'text-emerald-600',
+    gradient: 'from-emerald-500 to-emerald-400',
   },
   diamond: {
-    gradient: 'from-purple-500 via-pink-400 to-purple-500',
-    border: 'border-pink-400',
-    shadow: 'shadow-[0_0_20px_rgba(236,72,153,0.6)]',
-    textColor: 'text-white',
+    bg: 'bg-score-elite',
+    border: 'border-purple-400',
+    shadow: 'shadow-[2px_2px_0px_0px_rgba(168,85,247,0.6)]',
+    textColor: 'text-purple-50',
+    labelColor: 'text-purple-500',
+    valueColor: 'text-purple-600',
+    gradient: 'from-purple-500 to-purple-400',
   },
 };
 

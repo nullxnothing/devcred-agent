@@ -1,9 +1,10 @@
-// DevCred Popup Script
+// DevKarma Popup Script
 
 const API_BASE = 'https://devkarmaagent-production.up.railway.app';
 
 document.addEventListener('DOMContentLoaded', async () => {
-  const enabledToggle = document.getElementById('enabled');
+  const showCardToggle = document.getElementById('showCard');
+  const showBadgeToggle = document.getElementById('showBadge');
   const autoScanToggle = document.getElementById('autoScan');
   const scannedEl = document.getElementById('scanned');
   const flaggedEl = document.getElementById('flagged');
@@ -11,9 +12,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   const statusText = document.getElementById('statusText');
 
   // Load saved settings
-  const settings = await chrome.storage.local.get(['enabled', 'autoScan', 'stats']);
+  const settings = await chrome.storage.local.get(['showCard', 'showBadge', 'autoScan', 'stats']);
 
-  enabledToggle.checked = settings.enabled !== false;
+  showCardToggle.checked = settings.showCard !== false;
+  showBadgeToggle.checked = settings.showBadge !== false;
   autoScanToggle.checked = settings.autoScan !== false;
 
   if (settings.stats) {
@@ -42,38 +44,35 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   checkAPI();
 
-  // Save settings on change
-  enabledToggle.addEventListener('change', async () => {
-    await chrome.storage.local.set({ enabled: enabledToggle.checked });
-
-    // Notify content script
+  // Helper to notify content script
+  async function notifyContentScript(changes) {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     if (tab?.id) {
       try {
         chrome.tabs.sendMessage(tab.id, {
           type: 'SETTINGS_CHANGED',
-          enabled: enabledToggle.checked
+          ...changes
         });
       } catch (e) {
         // Tab might not have content script
       }
     }
+  }
+
+  // Save settings on change
+  showCardToggle.addEventListener('change', async () => {
+    await chrome.storage.local.set({ showCard: showCardToggle.checked });
+    notifyContentScript({ showCard: showCardToggle.checked });
+  });
+
+  showBadgeToggle.addEventListener('change', async () => {
+    await chrome.storage.local.set({ showBadge: showBadgeToggle.checked });
+    notifyContentScript({ showBadge: showBadgeToggle.checked });
   });
 
   autoScanToggle.addEventListener('change', async () => {
     await chrome.storage.local.set({ autoScan: autoScanToggle.checked });
-
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (tab?.id) {
-      try {
-        chrome.tabs.sendMessage(tab.id, {
-          type: 'SETTINGS_CHANGED',
-          autoScan: autoScanToggle.checked
-        });
-      } catch (e) {
-        // Tab might not have content script
-      }
-    }
+    notifyContentScript({ autoScan: autoScanToggle.checked });
   });
 
   // Update stats periodically

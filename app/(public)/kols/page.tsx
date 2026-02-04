@@ -42,15 +42,15 @@ function KolRow({ kol, index }: { kol: KolLeaderboardEntry; index: number }) {
   return (
     <Link
       href={profileUrl}
-      className={`group grid grid-cols-12 gap-3 md:gap-4 px-4 md:px-8 py-5 border-b border-dark/10 items-center hover:bg-amber-50/50 transition-all ${index % 2 === 0 ? 'bg-cream/30' : 'bg-white/50'}`}
+      className={`group grid grid-cols-12 gap-3 md:gap-4 px-4 md:px-8 py-5 border-b border-dark/10 items-center hover:bg-warning-light transition-all ${index % 2 === 0 ? 'bg-cream/30' : 'bg-card/50'}`}
     >
       {/* Rank */}
       <div className="col-span-1 flex items-center">
         {kol.kolscanRank && kol.kolscanRank <= 3 ? (
           <div className={`w-8 h-8 flex items-center justify-center font-black text-sm ${
-            kol.kolscanRank === 1 ? 'bg-yellow-400 text-yellow-900' :
-            kol.kolscanRank === 2 ? 'bg-gray-300 text-gray-700' :
-            'bg-orange-300 text-orange-800'
+            kol.kolscanRank === 1 ? 'bg-medal-gold text-cream' :
+            kol.kolscanRank === 2 ? 'bg-medal-silver text-dark' :
+            'bg-medal-bronze text-cream'
           }`}>
             {kol.kolscanRank}
           </div>
@@ -67,11 +67,11 @@ function KolRow({ kol, index }: { kol: KolLeaderboardEntry; index: number }) {
               src={kol.user!.avatarUrl}
               alt={displayName}
               size="md"
-              className="border-2 border-amber-300"
+              className="border-2 border-warning-border"
             />
           ) : (
-            <div className="w-10 h-10 bg-gradient-to-br from-amber-400 to-cyan-400 border-2 border-amber-300 flex items-center justify-center">
-              <Star size={18} className="text-white" />
+            <div className="w-10 h-10 bg-gradient-to-br from-warning to-accent border-2 border-warning-border flex items-center justify-center">
+              <Star size={18} className="text-cream" />
             </div>
           )}
           <div className="absolute -top-1 -right-1">
@@ -79,7 +79,7 @@ function KolRow({ kol, index }: { kol: KolLeaderboardEntry; index: number }) {
           </div>
         </div>
         <div className="min-w-0 flex-1">
-          <div className="font-bold text-sm md:text-base leading-tight mb-0.5 group-hover:text-amber-600 transition-colors flex items-center gap-2 truncate">
+          <div className="font-bold text-sm md:text-base leading-tight mb-0.5 group-hover:text-warning transition-colors flex items-center gap-2 truncate">
             {displayName}
             <ExternalLink size={12} className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
           </div>
@@ -91,16 +91,16 @@ function KolRow({ kol, index }: { kol: KolLeaderboardEntry; index: number }) {
 
       {/* Win/Loss - Desktop */}
       <div className="hidden md:flex col-span-2 items-center gap-2">
-        <span className="text-green-600 font-bold">{kol.wins}W</span>
+        <span className="text-success font-bold">{kol.wins}W</span>
         <span className="text-dark/30">/</span>
-        <span className="text-red-500 font-bold">{kol.losses}L</span>
+        <span className="text-error font-bold">{kol.losses}L</span>
         <span className="text-xs text-dark/40">({winRate}%)</span>
       </div>
 
       {/* PnL - Desktop */}
       <div className="hidden md:block col-span-2">
         {kol.pnlSol !== null ? (
-          <span className={`font-bold ${kol.pnlSol >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+          <span className={`font-bold ${kol.pnlSol >= 0 ? 'text-success' : 'text-error'}`}>
             {kol.pnlSol >= 0 ? '+' : ''}{kol.pnlSol.toLocaleString()} SOL
           </span>
         ) : (
@@ -118,7 +118,7 @@ function KolRow({ kol, index }: { kol: KolLeaderboardEntry; index: number }) {
             size="sm"
           />
         )}
-        <div className={`font-black text-2xl md:text-3xl font-display-mock ${hasProfile ? scoreColor.textClass : 'text-dark/20'}`}>
+        <div className={`text-2xl md:text-3xl font-stat ${hasProfile ? scoreColor.textClass : 'text-dark/20'}`}>
           {hasProfile ? score : '-'}
         </div>
       </div>
@@ -126,12 +126,12 @@ function KolRow({ kol, index }: { kol: KolLeaderboardEntry; index: number }) {
       {/* Mobile: W/L and PnL */}
       <div className="col-span-12 md:hidden flex items-center justify-between pl-14 -mt-1">
         <div className="flex items-center gap-2 text-xs">
-          <span className="text-green-600 font-bold">{kol.wins}W</span>
+          <span className="text-success font-bold">{kol.wins}W</span>
           <span className="text-dark/30">/</span>
-          <span className="text-red-500 font-bold">{kol.losses}L</span>
+          <span className="text-error font-bold">{kol.losses}L</span>
         </div>
         {kol.pnlSol !== null && (
-          <span className={`text-xs font-bold ${kol.pnlSol >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+          <span className={`text-xs font-bold ${kol.pnlSol >= 0 ? 'text-success' : 'text-error'}`}>
             {kol.pnlSol >= 0 ? '+' : ''}{kol.pnlSol.toLocaleString()} SOL
           </span>
         )}
@@ -149,17 +149,17 @@ export default async function KolLeaderboardPage() {
   return (
     <div className="min-h-screen pb-20">
       {/* Header */}
-      <div className="px-6 md:px-12 py-12 md:py-20 border-b-2 border-dark bg-gradient-to-br from-amber-50 via-cream to-cyan-50 relative overflow-hidden">
+      <div className="px-6 md:px-12 py-12 md:py-20 border-b-2 border-dark bg-cream dark:bg-dark-light relative overflow-hidden">
         {/* Background pattern */}
         <div className="absolute inset-0 opacity-[0.03]" style={{
-          backgroundImage: 'radial-gradient(circle, #3B3B3B 1px, transparent 1px)',
+          backgroundImage: 'radial-gradient(circle, var(--border) 1px, transparent 1px)',
           backgroundSize: '24px 24px',
         }} />
 
         <div className="relative z-10 max-w-6xl mx-auto">
           <div className="flex items-center gap-4 mb-4">
-            <div className="w-14 h-14 bg-gradient-to-br from-amber-500 to-cyan-400 flex items-center justify-center border-2 border-dark shadow-[4px_4px_0px_0px_#3B3B3B]">
-              <Star size={28} className="text-white" />
+            <div className="w-14 h-14 bg-gradient-to-br from-amber-500 to-cyan-400 flex items-center justify-center border-2 border-border shadow-[4px_4px_0px_0px_var(--border)]">
+              <Star size={28} className="text-cream" />
             </div>
             <div>
               <div className="flex items-center gap-3">
@@ -177,15 +177,15 @@ export default async function KolLeaderboardPage() {
           {/* Stats bar */}
           <div className="flex flex-wrap gap-6 md:gap-10">
             <div className="flex items-center gap-2">
-              <Users size={18} className="text-amber-500" />
+              <Users size={18} className="text-warning" />
               <span className="text-sm font-bold">{kols.length} KOLs Tracked</span>
             </div>
             <div className="flex items-center gap-2">
-              <Trophy size={18} className="text-amber-500" />
+              <Trophy size={18} className="text-warning" />
               <span className="text-sm font-bold">{claimedCount} Profiles Claimed</span>
             </div>
             <div className="flex items-center gap-2">
-              <TrendingUp size={18} className="text-green-500" />
+              <TrendingUp size={18} className="text-success" />
               <span className="text-sm font-bold">{totalPnl.toLocaleString()} SOL Total PnL</span>
             </div>
           </div>
@@ -214,17 +214,17 @@ export default async function KolLeaderboardPage() {
       {/* Empty State */}
       {kols.length === 0 && (
         <div className="p-12 md:p-24 text-center max-w-2xl mx-auto">
-          <div className="w-20 h-20 bg-amber-100 border-2 border-dashed border-amber-300 mx-auto mb-6 flex items-center justify-center">
-            <Star size={36} className="text-amber-400" />
+          <div className="w-20 h-20 bg-warning-light border-2 border-dashed border-warning-border mx-auto mb-6 flex items-center justify-center">
+            <Star size={36} className="text-warning" />
           </div>
           <h3 className="text-2xl md:text-3xl font-black font-display-mock mb-4">No KOLs Yet</h3>
           <p className="text-dark/60 mb-6">
             Run the KOL scraper to populate this leaderboard.
           </p>
-          <code className="block bg-dark text-cream px-4 py-3 text-sm font-mono mb-6">
+          <code className="block bg-inverted-bg text-inverted-text px-4 py-3 text-sm font-mono mb-6">
             npx tsx scripts/crawl-kols.ts
           </code>
-          <Link href="/leaderboard" className="inline-flex items-center gap-2 px-6 py-3 bg-accent text-cream font-bold uppercase text-sm border-2 border-accent hover:bg-accent-dark transition-colors shadow-[4px_4px_0px_0px_#3B3B3B]">
+          <Link href="/leaderboard" className="inline-flex items-center gap-2 px-6 py-3 bg-accent text-cream font-bold uppercase text-sm border-2 border-accent hover:bg-accent-dark transition-colors shadow-[4px_4px_0px_0px_var(--border)]">
             View Main Leaderboard <ArrowRight size={18} />
           </Link>
         </div>

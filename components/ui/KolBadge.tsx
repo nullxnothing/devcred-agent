@@ -18,9 +18,9 @@ export function KolBadge({ size = 'md', showGlow = true, className = '' }: KolBa
       className={`
         inline-flex items-center
         ${sizeClasses[size]}
-        bg-gradient-to-r from-amber-500 via-yellow-400 to-cyan-400
-        ${showGlow ? 'shadow-[0_0_12px_rgba(251,191,36,0.5)]' : ''}
-        border border-amber-300
+        bg-gradient-to-r from-warning via-score-legend to-accent
+        ${showGlow ? 'badge-glow-kol' : ''}
+        border border-warning-border
         font-black uppercase tracking-wider
         text-dark
         rounded-sm

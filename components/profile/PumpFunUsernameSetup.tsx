@@ -51,7 +51,7 @@ export function PumpFunUsernameSetup({ onComplete, onSkip }: PumpFunUsernameSetu
 
   if (status === 'success') {
     return (
-      <div className="flex items-center gap-2 p-3 bg-green-50 border-2 border-green-500 text-green-700">
+      <div className="flex items-center gap-2 p-3 bg-success-light border-2 border-success-border text-success">
         <Check size={20} />
         <span className="font-bold text-sm">Username saved!</span>
       </div>
@@ -59,7 +59,7 @@ export function PumpFunUsernameSetup({ onComplete, onSkip }: PumpFunUsernameSetu
   }
 
   return (
-    <div className="p-4 border-2 border-dark/10 bg-white/50">
+    <div className="p-4 border-2 border-dark/10 bg-card/50">
       <div className="mb-3">
         <h3 className="font-bold text-sm text-dark mb-1">Link Pump.fun Username (Optional)</h3>
         <p className="text-xs text-dark/60">
@@ -74,12 +74,12 @@ export function PumpFunUsernameSetup({ onComplete, onSkip }: PumpFunUsernameSetu
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             placeholder="Your pump.fun username"
-            className="w-full h-10 px-3 border-2 border-dark/30 bg-white text-sm font-medium focus:border-accent focus:outline-none"
+            className="w-full h-10 px-3 border-2 border-dark/30 bg-card text-sm font-medium focus:border-accent focus:outline-none"
             disabled={status === 'saving'}
             maxLength={50}
           />
           {error && (
-            <div className="flex items-center gap-2 mt-2 text-red-600 text-xs">
+            <div className="flex items-center gap-2 mt-2 text-error text-xs">
               <AlertCircle size={14} />
               <span>{error}</span>
             </div>
@@ -90,7 +90,7 @@ export function PumpFunUsernameSetup({ onComplete, onSkip }: PumpFunUsernameSetu
           <button
             type="submit"
             disabled={status === 'saving' || !username.trim()}
-            className="flex-1 h-10 bg-accent text-white font-bold uppercase tracking-tight text-xs hover:bg-accent/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="flex-1 h-10 bg-accent text-cream font-bold uppercase tracking-tight text-xs hover:bg-accent/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {status === 'saving' ? (
               <>
@@ -105,7 +105,7 @@ export function PumpFunUsernameSetup({ onComplete, onSkip }: PumpFunUsernameSetu
           <button
             type="button"
             onClick={handleSkip}
-            className="h-10 px-4 border-2 border-dark/20 bg-white text-dark font-bold uppercase tracking-tight text-xs hover:bg-dark/5 transition-colors"
+            className="h-10 px-4 border-2 border-dark/20 bg-card text-dark font-bold uppercase tracking-tight text-xs hover:bg-dark/5 transition-colors"
           >
             Skip
           </button>

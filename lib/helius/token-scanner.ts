@@ -10,6 +10,43 @@ import { SYSTEM_TOKEN_MINTS } from '../constants';
 
 const PUMP_FUN_PROGRAM = '6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P';
 
+interface WalletAssets {
+  sol: number;
+  tokens: HeliusAsset[];
+  nfts: HeliusAsset[];
+}
+
+/**
+ * Fetch all assets for a wallet in one call using getAssetsByOwner
+ * Returns SOL balance, SPL tokens, and NFTs in a single API call
+ */
+export async function getWalletAssets(walletAddress: string): Promise<WalletAssets> {
+  try {
+    const result = await heliusRpc<{
+      items: HeliusAsset[];
+      nativeBalance?: { lamports: number };
+    }>('getAssetsByOwner', {
+      ownerAddress: walletAddress,
+      displayOptions: {
+        showFungible: true,
+        showNativeBalance: true,
+      },
+      limit: 1000,
+    });
+
+    const items = result.items || [];
+
+    return {
+      sol: (result.nativeBalance?.lamports ?? 0) / 1e9,
+      tokens: items.filter(a => a.interface === 'FungibleToken' || a.interface === 'FungibleAsset'),
+      nfts: items.filter(a => a.interface === 'V1_NFT' || a.interface === 'ProgrammableNFT'),
+    };
+  } catch (error) {
+    console.error('Error fetching wallet assets:', error);
+    return { sol: 0, tokens: [], nfts: [] };
+  }
+}
+
 export async function getTokensCreatedByWallet(walletAddress: string): Promise<TokenCreated[]> {
   const PAGE_LIMIT = 1000;
   const allTokens: TokenCreated[] = [];
@@ -174,7 +211,7 @@ export async function getTokensCreatedByWalletViaFeePayer(walletAddress: string)
   try {
     let before: string | undefined;
     let hasMore = true;
-    const MAX_PAGES = 10;
+    const MAX_PAGES = 100; // Scan up to 10,000 transactions to catch all token creations
     let page = 0;
 
     while (hasMore && page < MAX_PAGES) {
@@ -257,126 +294,3 @@ export async function getTokensCreatedByWalletViaFeePayer(walletAddress: string)
   return tokens;
 }
 
-export async function getTokensFromTransactionHistory(walletAddress: string): Promise<TokenCreated[]> {
-  const tokens: TokenCreated[] = [];
-  const seenMints = new Set<string>();
-
-  try {
-    let before: string | undefined;
-    let hasMore = true;
-    const MAX_PAGES = 15;
-    let page = 0;
-
-    while (hasMore && page < MAX_PAGES) {
-      let url = `${HELIUS_API_URL}/addresses/${walletAddress}/transactions?api-key=${process.env.HELIUS_API_KEY}&limit=100`;
-      if (before) {
-        url += `&before=${before}`;
-      }
-
-      const response = await rateLimitedFetch(url, { method: 'GET' });
-      if (!response.ok) break;
-
-      const transactions = await response.json();
-      if (!Array.isArray(transactions) || transactions.length === 0) {
-        hasMore = false;
-        break;
-      }
-
-      before = transactions[transactions.length - 1].signature;
-      page++;
-
-      for (const tx of transactions) {
-        const isPumpFunTx = tx.instructions?.some((inst: { programId?: string }) =>
-          inst.programId === PUMP_FUN_PROGRAM
-        ) || JSON.stringify(tx).includes(PUMP_FUN_PROGRAM);
-
-        const isCreateTx = tx.type === 'CREATE';
-
-        if (tx.tokenTransfers && tx.tokenTransfers.length > 0) {
-          for (const transfer of tx.tokenTransfers) {
-            const isPumpMint = transfer.mint?.endsWith('pump');
-            const walletReceivedTokens = transfer.toUserAccount === walletAddress;
-
-            if (isPumpMint && walletReceivedTokens && !seenMints.has(transfer.mint) && transfer.tokenAmount > 0) {
-              const asset = await getAssetByMint(transfer.mint);
-              if (asset) {
-                seenMints.add(transfer.mint);
-                tokens.push({
-                  mintAddress: transfer.mint,
-                  name: asset.content?.metadata?.name || 'Unknown',
-                  symbol: asset.content?.metadata?.symbol || 'UNKNOWN',
-                  creatorAddress: walletAddress,
-                  supply: asset.token_info?.supply || 0,
-                  decimals: asset.token_info?.decimals || 0,
-                  pricePerToken: asset.token_info?.price_info?.price_per_token,
-                });
-              }
-            }
-          }
-        }
-      }
-
-      if (transactions.length < 100) {
-        hasMore = false;
-      }
-    }
-  } catch (error) {
-    console.error('Error fetching transaction history:', error);
-  }
-
-  return tokens;
-}
-
-export async function getAllTokensCreatedByWallet(walletAddress: string): Promise<TokenCreated[]> {
-  const tokenMap = new Map<string, TokenCreated>();
-
-  const dasTokens = await getTokensCreatedByWallet(walletAddress);
-  for (const token of dasTokens) {
-    tokenMap.set(token.mintAddress, token);
-  }
-
-  const txTokens = await getTokensFromTransactionHistory(walletAddress);
-  for (const token of txTokens) {
-    if (!tokenMap.has(token.mintAddress)) {
-      tokenMap.set(token.mintAddress, token);
-    }
-  }
-
-  return Array.from(tokenMap.values());
-}
-
-export async function getTokensCreatedByWalletFast(walletAddress: string): Promise<{
-  tokens: TokenCreated[];
-  totalTokens: number;
-}> {
-  const tokens = await getTokensCreatedByWallet(walletAddress);
-
-  return {
-    tokens,
-    totalTokens: tokens.length,
-  };
-}
-
-export async function getTokensCreatedByWalletVerified(walletAddress: string): Promise<TokenCreated[]> {
-  const tokenMap = new Map<string, TokenCreated>();
-
-  const dasTokens = await getTokensCreatedByWallet(walletAddress);
-  for (const token of dasTokens) {
-    tokenMap.set(token.mintAddress, {
-      ...token,
-      creationVerified: false,
-    });
-  }
-
-  const feePayerTokens = await getTokensCreatedByWalletViaFeePayer(walletAddress);
-  for (const token of feePayerTokens) {
-    tokenMap.set(token.mintAddress, token);
-  }
-
-  return Array.from(tokenMap.values());
-}
-
-export async function hasTokenCreationHistory(walletAddress: string): Promise<boolean> {
-  const tokens = await getTokensCreatedByWallet(walletAddress);
-  return tokens.length > 0;
-}

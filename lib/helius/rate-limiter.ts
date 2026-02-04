@@ -57,7 +57,9 @@ export async function rateLimitedFetchWithRetry(
 
     // Retry on rate limit or server errors
     if (response.status === 429 || response.status === 503) {
-      const backoffMs = Math.pow(2, attempt) * 1000;
+      const baseDelay = Math.pow(2, attempt) * 1000;
+      const jitter = Math.random() * 500; // 0-500ms random jitter to prevent synchronized retries
+      const backoffMs = baseDelay + jitter;
       await sleep(backoffMs);
       lastError = new Error(`Helius API error: ${response.status} ${response.statusText}`);
       continue;

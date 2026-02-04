@@ -4,7 +4,7 @@ import { Suspense } from 'react';
 import { Wallet } from 'lucide-react';
 import { getProfileData } from '@/lib/data-fetching';
 import { Avatar } from '@/components/ui/Avatar';
-import { ProfileActions, ConnectWalletButton, ShareButton, TokenCard, BadgeGrid } from '@/components/profile';
+import { ProfileActions, ConnectWalletButton, ShareButton, TokenCard, BadgeGrid, TwitterLink } from '@/components/profile';
 import { WalletList } from '@/components/wallet';
 import { AddressDisplay } from '@/components/ui/CopyButton';
 import { TierBadge } from '@/components/ui/TierBadge';
@@ -93,59 +93,66 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
   return (
     <div className="min-h-screen bg-cream">
       {/* Profile Header */}
-      <div className="bg-dark text-cream p-6 md:p-12 lg:p-20 relative overflow-hidden border-b-2 border-dark">
-        {/* Background Pattern */}
-        <div className="absolute inset-0 opacity-20" style={{
-          backgroundImage: 'linear-gradient(#FBF0DF 1px, transparent 1px), linear-gradient(90deg, #FBF0DF 1px, transparent 1px)',
+      <div className="px-4 sm:px-6 md:px-12 py-8 sm:py-12 md:py-20 border-b-2 border-border bg-card relative overflow-hidden">
+        {/* Background pattern */}
+        <div className="absolute inset-0 opacity-10" style={{
+          backgroundImage: 'linear-gradient(var(--border) 1px, transparent 1px), linear-gradient(90deg, var(--border) 1px, transparent 1px)',
           backgroundSize: '32px 32px'
         }} />
-        <div className="absolute top-0 right-0 p-12 opacity-10 font-display-mock text-[20rem] leading-none pointer-events-none select-none text-accent">
-          {score.total}
-        </div>
 
         <div className="relative z-10 max-w-6xl mx-auto">
-          <div className="flex flex-col md:flex-row gap-8 items-start md:items-end justify-between mb-12">
-            <div className="flex flex-col md:flex-row gap-8 items-start md:items-center">
+          {/* Identity Section */}
+          <div className="flex flex-col gap-4 sm:gap-6 md:flex-row md:items-center md:justify-between mb-6 sm:mb-8">
+            <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-start sm:items-center">
+              {/* Avatar - responsive sizes */}
+              <Avatar
+                src={user.avatarUrl?.replace('_normal', '_400x400')}
+                alt={displayName}
+                size="lg"
+                className="border-3 sm:border-4 border-border shrink-0 sm:hidden"
+                priority
+              />
               <Avatar
                 src={user.avatarUrl?.replace('_normal', '_400x400')}
                 alt={displayName}
                 size="xl"
-                className="border-4 border-accent shrink-0"
+                className="border-4 border-border shrink-0 hidden sm:block"
                 priority
               />
-              <div>
-                <div className="flex items-center gap-3 mb-2 flex-wrap">
-                  <h1 className="text-4xl md:text-5xl font-black font-display-mock tracking-tight">
+              <div className="min-w-0">
+                {/* Name Row */}
+                <div className="flex items-center gap-2 sm:gap-3 mb-2 flex-wrap">
+                  <h1 className="text-2xl sm:text-3xl md:text-4xl font-black font-display-mock tracking-tight text-dark truncate max-w-[250px] sm:max-w-none">
                     {displayName}
                   </h1>
-                  {user.isKol && <KolBadge size="lg" />}
+                  {user.isKol && <KolBadge size="sm" className="sm:hidden" />}
+                  {user.isKol && <KolBadge size="md" className="hidden sm:inline-flex" />}
                   {user.twitterHandle && (
                     <a
                       href={`https://x.com/${user.twitterHandle}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-cream/60 hover:text-accent transition-colors"
+                      className="text-text-muted hover:text-accent active:text-accent transition-colors p-1 -m-1"
                       title={`@${user.twitterHandle} on X`}
                     >
-                      <svg viewBox="0 0 24 24" className="w-6 h-6 fill-current" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" className="w-4 h-4 sm:w-5 sm:h-5 fill-current" aria-hidden="true">
                         <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
                       </svg>
                     </a>
                   )}
-                  {user.isVerified && (
-                    <div className="bg-accent text-cream px-2 py-0.5 text-xs font-bold uppercase">Verified</div>
-                  )}
                 </div>
-                <div className="font-mono text-cream/60 mb-4 flex items-center gap-2 flex-wrap">
-                  <Wallet size={16} />
+
+                {/* Wallet Row */}
+                <div className="font-mono text-xs sm:text-sm text-text-muted mb-2 sm:mb-3 flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                  <Wallet size={12} className="sm:w-3.5 sm:h-3.5" />
                   {wallets.length === 0 ? (
                     'No wallet linked'
                   ) : wallets.length === 1 && primaryWallet ? (
-                    <AddressDisplay address={primaryWallet.address} className="text-cream/60 hover:text-accent" />
+                    <AddressDisplay address={primaryWallet.address} className="text-text-muted hover:text-accent" />
                   ) : primaryWallet ? (
-                    <span className="flex items-center gap-2">
-                      <AddressDisplay address={primaryWallet.address} className="text-cream/60 hover:text-accent" />
-                      <span className="text-accent">+{wallets.length - 1} more</span>
+                    <span className="flex items-center gap-1.5 sm:gap-2">
+                      <AddressDisplay address={primaryWallet.address} className="text-text-muted hover:text-accent" />
+                      <span className="text-accent text-[10px] sm:text-xs">+{wallets.length - 1} more</span>
                     </span>
                   ) : null}
                   {primaryWallet && (
@@ -153,21 +160,23 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
                       href={`https://pump.fun/profile/${primaryWallet.address}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="ml-2 px-2 py-0.5 bg-gradient-to-r from-pink-500 to-purple-500 text-white text-xs font-bold rounded hover:opacity-80 transition-opacity"
+                      className="px-1.5 sm:px-2 py-0.5 bg-accent hover:bg-accent-dark active:bg-accent-dark text-cream text-[9px] sm:text-[10px] font-bold uppercase transition-colors"
                     >
                       Pump.fun ↗
                     </a>
                   )}
                 </div>
-                <div className="flex gap-2 items-center">
+
+                {/* Tier + Migrations Row */}
+                <div className="flex gap-2 items-center flex-wrap">
                   <TierBadge
                     tier={score.tier}
                     tierName={score.tierName}
                     tierColor={score.tierColor}
-                    size="md"
+                    size="sm"
                   />
                   {stats.migratedTokens > 0 && (
-                    <span className="px-3 py-1 bg-accent/20 border border-accent/30 text-xs font-bold uppercase text-cream">
+                    <span className="px-1.5 sm:px-2 py-0.5 bg-accent/20 border border-accent/30 text-[9px] sm:text-[10px] font-bold uppercase text-dark">
                       {stats.migratedTokens} Migrations
                     </span>
                   )}
@@ -175,7 +184,8 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
               </div>
             </div>
 
-            <div className="flex gap-4 w-full md:w-auto">
+            {/* Share Button */}
+            <div className="flex gap-3 w-full sm:w-auto">
               <ShareButton
                 handle={displayHandle}
                 score={score.total}
@@ -191,9 +201,9 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
             </div>
           </div>
 
-          {/* Achievement Badges */}
+          {/* Achievement Badges - moved closer */}
           {tokens.length > 0 && (
-            <div className="mt-8">
+            <div className="mb-6">
               <BadgeGrid 
                 tokens={tokens.map(t => ({
                   mint: t.mint,
@@ -204,42 +214,61 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
                   score: t.score,
                 }))}
                 title="Achievements"
-                maxDisplay={6}
+                maxDisplay={4}
               />
             </div>
           )}
 
-          {/* Stats Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8 border-t border-cream/20 pt-10 mt-8">
-            <div className="bg-dark-light border border-cream/20 p-4 md:p-6">
-              <div className="text-[10px] uppercase tracking-widest text-cream/50 mb-2 font-bold">DevCred Score</div>
-              <div className={`text-4xl md:text-5xl font-black font-display-mock ${getDevScoreColor(score.total).textClass} ${getDevScoreColor(score.total).glowClass}`}>
-                {score.total}
+          {/* Stats Bar - unified horizontal layout */}
+          <div className="bg-surface/50 p-3 sm:p-4 md:p-6 rounded-sm">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
+              {/* Primary: DevCred Score with emphasis */}
+              <div className="flex flex-col">
+                <div className="text-[9px] sm:text-[10px] uppercase tracking-widest text-text-muted mb-1 font-bold">DevCred Score</div>
+                <div className="flex items-end gap-1.5 sm:gap-2">
+                  <span className={`text-3xl sm:text-4xl md:text-5xl font-stat ${getDevScoreColor(score.total).textClass}`}>
+                    {score.total}
+                  </span>
+                  <span className="text-text-muted/50 text-[10px] sm:text-xs mb-1.5 sm:mb-2">/740</span>
+                </div>
+                {/* Progress bar */}
+                <div className="mt-1.5 sm:mt-2 h-1 bg-border/30 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full ${getDevScoreColor(score.total).bgClass} transition-all`}
+                    style={{ width: `${Math.min(100, (score.total / 740) * 100)}%` }}
+                  />
+                </div>
               </div>
-            </div>
-            <div className="bg-dark-light border border-cream/20 p-4 md:p-6">
-              <div className="text-[10px] uppercase tracking-widest text-cream/50 mb-2 font-bold">Rank</div>
-              <div className="text-4xl md:text-5xl font-black font-display-mock text-cream">
-                {user.rank ? `#${user.rank}` : '-'}
+
+              {/* Rank */}
+              <div className="flex flex-col">
+                <div className="text-[9px] sm:text-[10px] uppercase tracking-widest text-text-muted mb-1 font-bold">Rank</div>
+                <span className="text-2xl sm:text-3xl md:text-4xl font-stat text-dark">
+                  {user.rank ? `#${user.rank}` : '-'}
+                </span>
               </div>
-            </div>
-            <div className="bg-dark-light border border-cream/20 p-4 md:p-6">
-              <div className="text-[10px] uppercase tracking-widest text-cream/50 mb-2 font-bold">Launches</div>
-              <div className="text-4xl md:text-5xl font-black font-display-mock text-cream">{stats.totalTokens}</div>
-            </div>
-            <div className="bg-dark-light border border-cream/20 p-4 md:p-6">
-              <div className="text-[10px] uppercase tracking-widest text-cream/50 mb-2 font-bold">Reputation</div>
-              <div className="text-2xl md:text-3xl font-black font-display-mock text-cream">{score.tierName}</div>
+
+              {/* Launches */}
+              <div className="flex flex-col">
+                <div className="text-[9px] sm:text-[10px] uppercase tracking-widest text-text-muted mb-1 font-bold">Launches</div>
+                <span className="text-2xl sm:text-3xl md:text-4xl font-stat text-dark">{stats.totalTokens}</span>
+              </div>
+
+              {/* Tier */}
+              <div className="flex flex-col">
+                <div className="text-[9px] sm:text-[10px] uppercase tracking-widest text-text-muted mb-1 font-bold">Reputation</div>
+                <span className="text-lg sm:text-xl md:text-2xl font-bold uppercase tracking-wide text-dark truncate">{score.tierName}</span>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
       {/* Content Section */}
-      <div className="max-w-6xl mx-auto p-6 md:p-12 lg:p-20">
-        {/* Wallet Management Section */}
+      <div className="max-w-6xl mx-auto px-4 py-6 sm:p-6 md:p-12 lg:p-20">
+        {/* Account Management Section */}
         <ErrorBoundary>
-          <div className="mb-12">
+          <div className="mb-8 sm:mb-12 grid gap-4 sm:gap-6 md:grid-cols-2">
             <WalletList
               profileUserId={user.id}
               wallets={wallets.map(w => ({
@@ -249,11 +278,16 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
                 label: w.label,
               }))}
             />
+            <TwitterLink
+              profileUserId={user.id}
+              currentTwitterHandle={user.twitterHandle}
+              currentAvatarUrl={user.avatarUrl}
+            />
           </div>
         </ErrorBoundary>
 
-        <div className="flex items-end justify-between mb-8 border-b-2 border-dark/20 pb-4">
-          <h2 className="text-3xl md:text-4xl font-black font-display-mock text-dark">Token History</h2>
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 sm:gap-4 mb-6 sm:mb-8 border-b-2 border-dark/20 pb-3 sm:pb-4">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-black font-display-mock text-dark">Token History</h2>
           <ErrorBoundary>
             <ProfileActions profileUserId={user.id} hasWallets={wallets.length > 0} />
           </ErrorBoundary>
@@ -261,24 +295,24 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
 
         <ErrorBoundary>
           <Suspense fallback={
-            <div className="grid gap-6">
+            <div className="grid gap-4 sm:gap-6">
               {[...Array(3)].map((_, i) => (
-                <div key={i} className="border-2 border-dark/20 bg-white p-6 h-48 animate-pulse" />
+                <div key={i} className="border-2 border-dark/20 bg-card p-4 sm:p-6 h-32 sm:h-48 animate-pulse rounded-sm" />
               ))}
             </div>
           }>
-            <div className="grid gap-6">
+            <div className="grid gap-4 sm:gap-6">
               {tokens.map((token) => (
                 <TokenCard key={token.mint} token={token} />
               ))}
 
               {tokens.length === 0 && (
-                <div className="border-2 border-dashed border-dark/30 bg-white p-10 md:p-16 text-center">
-                  <div className="w-16 h-16 bg-accent/10 border-2 border-dashed border-accent/30 mx-auto mb-6 flex items-center justify-center">
-                    <Wallet size={28} className="text-accent/50" />
+                <div className="border-2 border-dashed border-dark/30 bg-card p-6 sm:p-10 md:p-16 text-center">
+                  <div className="w-12 h-12 sm:w-16 sm:h-16 bg-accent/10 border-2 border-dashed border-accent/30 mx-auto mb-4 sm:mb-6 flex items-center justify-center">
+                    <Wallet size={24} className="text-accent/50 sm:w-7 sm:h-7" />
                   </div>
-                  <h3 className="text-xl md:text-2xl font-black font-display-mock mb-3 text-dark">No Token Launches Yet</h3>
-                  <p className="text-dark/60 mb-6 max-w-md mx-auto">
+                  <h3 className="text-lg sm:text-xl md:text-2xl font-black font-display-mock mb-2 sm:mb-3 text-dark">No Token Launches Yet</h3>
+                  <p className="text-sm sm:text-base text-dark/60 mb-4 sm:mb-6 max-w-md mx-auto">
                     Connect a wallet to scan your token launch history and build your reputation.
                   </p>
                   <ConnectWalletButton profileUserId={user.id} />

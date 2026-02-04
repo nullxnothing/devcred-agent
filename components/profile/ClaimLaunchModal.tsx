@@ -1,9 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { useSession } from 'next-auth/react';
 import { X, Search, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { useWalletAuth } from '@/components/providers/AuthProvider';
 
 interface ClaimLaunchModalProps {
   isOpen: boolean;
@@ -21,7 +21,7 @@ interface TokenInfo {
 }
 
 export function ClaimLaunchModal({ isOpen, onClose, onClaimed }: ClaimLaunchModalProps) {
-  const { data: session } = useSession();
+  const { user } = useWalletAuth();
   const [mintAddress, setMintAddress] = useState('');
   const [status, setStatus] = useState<ClaimStatus>('idle');
   const [error, setError] = useState<string | null>(null);
@@ -56,7 +56,7 @@ export function ClaimLaunchModal({ isOpen, onClose, onClaimed }: ClaimLaunchModa
   };
 
   const handleClaim = async () => {
-    if (!tokenInfo || !session?.user?.id) return;
+    if (!tokenInfo || !user?.id) return;
 
     setStatus('claiming');
     setError(null);
@@ -100,7 +100,7 @@ export function ClaimLaunchModal({ isOpen, onClose, onClaimed }: ClaimLaunchModa
         onClick={handleClose}
       />
 
-      <div className="relative w-full max-w-lg bg-white border-2 border-dark shadow-[8px_8px_0px_0px_#3B3B3B]">
+      <div className="relative w-full max-w-lg bg-card border-2 border-border shadow-[8px_8px_0px_0px_var(--border)]">
         <div className="flex items-center justify-between p-6 border-b-2 border-dark/30">
           <h2 className="text-2xl font-black font-display-mock text-dark">Claim Token Launch</h2>
           <button
@@ -114,7 +114,7 @@ export function ClaimLaunchModal({ isOpen, onClose, onClaimed }: ClaimLaunchModa
         <div className="p-6">
           {status === 'success' ? (
             <div className="text-center py-8">
-              <CheckCircle size={64} className="mx-auto text-green-600 mb-4" />
+              <CheckCircle size={64} className="mx-auto text-success mb-4" />
               <h3 className="text-xl font-bold mb-2 text-dark">Token Claimed!</h3>
               <p className="text-dark/60">
                 {tokenInfo?.name} has been added to your profile.
@@ -156,9 +156,9 @@ export function ClaimLaunchModal({ isOpen, onClose, onClaimed }: ClaimLaunchModa
               </div>
 
               {error && (
-                <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 flex items-start gap-3">
-                  <AlertCircle size={20} className="text-red-400 shrink-0 mt-0.5" />
-                  <p className="text-red-400 text-sm">{error}</p>
+                <div className="mb-6 p-4 bg-error-light border border-error-border flex items-start gap-3">
+                  <AlertCircle size={20} className="text-error shrink-0 mt-0.5" />
+                  <p className="text-error text-sm">{error}</p>
                 </div>
               )}
 

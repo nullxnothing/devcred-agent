@@ -149,6 +149,39 @@ export async function getHolderCountQuick(mintAddress: string): Promise<number> 
   }
 }
 
+/**
+ * Check if a token has at least the specified number of holders
+ * More efficient than getHolderCount when you only need a threshold check
+ */
+export async function hasMinimumHolders(
+  mintAddress: string,
+  threshold: number
+): Promise<boolean> {
+  try {
+    const result = await heliusRpc<{
+      token_accounts: HeliusTokenAccount[];
+    }>('getTokenAccounts', {
+      mint: mintAddress,
+      limit: threshold + 10, // Fetch slightly more to account for duplicates
+      options: { showZeroBalance: false },
+    });
+
+    const uniqueOwners = new Set<string>();
+    for (const account of result.token_accounts || []) {
+      if (account.amount > 0) {
+        uniqueOwners.add(account.owner);
+        if (uniqueOwners.size >= threshold) {
+          return true;
+        }
+      }
+    }
+
+    return uniqueOwners.size >= threshold;
+  } catch {
+    return false;
+  }
+}
+
 export async function getHolderCountForScoring(mintAddress: string): Promise<number> {
   try {
     const uniqueOwners = new Set<string>();

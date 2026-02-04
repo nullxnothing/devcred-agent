@@ -60,28 +60,6 @@ This wallet has a history of abandoned/rugged projects. Exercise caution.
   `.trim();
 }
 
-function formatNewDeployerAlert(
-  result: WalletScanResult,
-  tokenName?: string,
-  tokenSymbol?: string
-): string {
-  return `
-DevCred Agent detected a **first-time deployer** on pump.fun.
-
-**Token:** ${tokenName || 'Unknown'} (${tokenSymbol || '???'})
-**Deployer:** \`${result.walletAddress}\`
-
-**Profile:**
-- DevCred Score: **${result.totalScore}** (${result.tierName})
-- This is their first token launch
-
-No historical data available for risk assessment. This is a new developer entering the ecosystem.
-
----
-*Automated alert from DevCred Agent - Colosseum Hackathon*
-  `.trim();
-}
-
 function formatReputableAlert(
   result: WalletScanResult,
   tokenName?: string,

@@ -41,10 +41,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className="dark" suppressHydrationWarning>
       <body
         className={`${marker.variable} ${dmSans.variable} ${jetbrains.variable} antialiased bg-cream text-dark font-body`}
       >
+        {/* Skip link for keyboard navigation */}
+        <a href="#main-content" className="skip-link">
+          Skip to main content
+        </a>
         <Providers>{children}</Providers>
       </body>
     </html>

@@ -3,9 +3,9 @@
 import { useState, useCallback } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useWalletModal } from '@solana/wallet-adapter-react-ui';
-import { useSession } from 'next-auth/react';
 import bs58 from 'bs58';
 import { Wallet, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { useWalletAuth } from '@/components/providers/AuthProvider';
 
 type VerificationStatus = 'idle' | 'connecting' | 'signing' | 'verifying' | 'success' | 'error';
 
@@ -15,7 +15,7 @@ interface WalletConnectProps {
 }
 
 export function WalletConnect({ onVerificationComplete, className = '' }: WalletConnectProps) {
-  const { data: session } = useSession();
+  const { user } = useWalletAuth();
   const { publicKey, signMessage, connected, disconnect } = useWallet();
   const { setVisible } = useWalletModal();
 
@@ -28,8 +28,8 @@ export function WalletConnect({ onVerificationComplete, className = '' }: Wallet
   }, [setVisible]);
 
   const handleVerify = useCallback(async () => {
-    if (!publicKey || !signMessage || !session?.user?.id) {
-      setError('Please connect your wallet and sign in with Twitter first.');
+    if (!publicKey || !signMessage || !user?.id) {
+      setError('Please connect your wallet and sign in first.');
       return;
     }
 
@@ -85,7 +85,7 @@ export function WalletConnect({ onVerificationComplete, className = '' }: Wallet
         setError('An unexpected error occurred');
       }
     }
-  }, [publicKey, signMessage, session, onVerificationComplete]);
+  }, [publicKey, signMessage, user, onVerificationComplete]);
 
   const handleDisconnect = useCallback(() => {
     disconnect();
@@ -94,12 +94,12 @@ export function WalletConnect({ onVerificationComplete, className = '' }: Wallet
     setError(null);
   }, [disconnect]);
 
-  if (!session?.user) {
+  if (!user) {
     return (
-      <div className={`p-6 border-2 border-dark/30 bg-white ${className}`}>
+      <div className={`p-6 border-2 border-dark/30 bg-card ${className}`}>
         <div className="flex items-center gap-3 text-dark/60">
           <AlertCircle size={20} />
-          <span className="text-sm font-medium">Sign in with Twitter to verify your wallet</span>
+          <span className="text-sm font-medium">Sign in to verify your wallet</span>
         </div>
       </div>
     );
@@ -107,7 +107,7 @@ export function WalletConnect({ onVerificationComplete, className = '' }: Wallet
 
   if (!connected) {
     return (
-      <div className={`p-6 border-2 border-dark/30 bg-white ${className}`}>
+      <div className={`p-6 border-2 border-dark/30 bg-card ${className}`}>
         <button
           onClick={handleConnect}
           className="flex items-center gap-3 w-full justify-center py-3 px-6 bg-accent text-cream font-bold uppercase tracking-wider hover:bg-accent/90 transition-colors"
@@ -124,10 +124,10 @@ export function WalletConnect({ onVerificationComplete, className = '' }: Wallet
 
   if (status !== 'success' && !verifiedAddress) {
     return (
-      <div className={`p-6 border-2 border-dark/30 bg-white ${className}`}>
+      <div className={`p-6 border-2 border-dark/30 bg-card ${className}`}>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-green-500"></div>
+            <div className="w-2 h-2 rounded-full bg-success"></div>
             <span className="text-sm font-mono truncate max-w-[200px] text-dark">
               {publicKey?.toBase58()}
             </span>
@@ -141,7 +141,7 @@ export function WalletConnect({ onVerificationComplete, className = '' }: Wallet
         </div>
 
         {error && (
-          <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
+          <div className="mb-4 p-3 bg-error-light border border-error-border text-error text-sm">
             {error}
           </div>
         )}
@@ -179,17 +179,17 @@ export function WalletConnect({ onVerificationComplete, className = '' }: Wallet
   }
 
   return (
-    <div className={`p-6 border-2 border-green-500/50 bg-green-500/10 ${className}`}>
+    <div className={`p-6 border-2 border-success-border bg-success-light ${className}`}>
       <div className="flex items-center gap-3 mb-2">
-        <CheckCircle size={24} className="text-green-400" />
-        <span className="font-bold text-green-400">Wallet Verified</span>
+        <CheckCircle size={24} className="text-success" />
+        <span className="font-bold text-success">Wallet Verified</span>
       </div>
-      <div className="font-mono text-sm text-green-300 truncate">
+      <div className="font-mono text-sm text-success/80 truncate">
         {verifiedAddress || publicKey?.toBase58()}
       </div>
       <button
         onClick={handleDisconnect}
-        className="mt-4 text-xs text-green-400/60 hover:text-green-400 underline"
+        className="mt-4 text-xs text-success/60 hover:text-success underline"
       >
         Disconnect & Remove
       </button>

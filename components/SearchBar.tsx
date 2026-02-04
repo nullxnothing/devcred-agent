@@ -108,15 +108,15 @@ export function SearchBar() {
     <div ref={containerRef} className="relative">
       {/* Scanning Overlay */}
       {isNavigating && (
-        <div className="fixed inset-0 bg-dark/80 z-[100] flex items-center justify-center">
-          <div className="bg-white border-2 border-dark p-8 shadow-[8px_8px_0px_0px_#3B3B3B] text-center max-w-md mx-4">
-            <Loader2 size={48} className="mx-auto mb-4 text-accent animate-spin" />
-            <h3 className="text-2xl font-black font-display-mock mb-2">Scanning Wallet</h3>
-            <p className="text-dark/70">Fetching on-chain token data. This may take a few seconds...</p>
+        <div className="fixed inset-0 bg-dark/80 z-[100] flex items-center justify-center p-4">
+          <div className="bg-card border-2 border-border p-6 sm:p-8 shadow-[4px_4px_0px_0px_var(--border)] sm:shadow-[8px_8px_0px_0px_var(--border)] text-center max-w-md w-full">
+            <Loader2 size={40} className="mx-auto mb-3 sm:mb-4 text-accent animate-spin sm:w-12 sm:h-12" />
+            <h3 className="text-xl sm:text-2xl font-black font-display-mock mb-2 text-dark">Scanning Wallet</h3>
+            <p className="text-sm sm:text-base text-text-muted">Fetching on-chain token data. This may take a few seconds...</p>
           </div>
         </div>
       )}
-      
+
       <div className="relative">
         <input
           ref={inputRef}
@@ -126,9 +126,9 @@ export function SearchBar() {
           onKeyDown={handleKeyDown}
           onFocus={() => hasResults && setIsOpen(true)}
           placeholder="Search wallet or @handle..."
-          className="w-full sm:w-64 h-12 pl-12 pr-10 bg-white border-2 border-dark text-dark placeholder:text-dark/50 font-medium focus:outline-none focus:ring-2 focus:ring-accent shadow-[4px_4px_0px_0px_#3B3B3B]"
+          className="w-full h-11 sm:h-12 pl-10 sm:pl-12 pr-10 bg-card border-2 border-border text-sm sm:text-base text-dark placeholder:text-text-muted font-medium focus:outline-none focus:ring-2 focus:ring-accent shadow-[3px_3px_0px_0px_var(--border)] sm:shadow-[4px_4px_0px_0px_var(--border)] rounded-sm"
         />
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-dark/50" size={20} />
+        <Search className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-text-muted" size={18} />
         {query && (
           <button
             onClick={() => {
@@ -136,49 +136,50 @@ export function SearchBar() {
               setResults(null);
               setIsOpen(false);
             }}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-dark/50 hover:text-dark"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-dark active:text-dark p-1"
+            aria-label="Clear search"
           >
-            <X size={18} />
+            <X size={16} className="sm:w-[18px] sm:h-[18px]" />
           </button>
         )}
       </div>
 
       {isOpen && (
-        <div className="absolute top-full left-0 right-0 mt-2 bg-white border-2 border-dark shadow-[4px_4px_0px_0px_#3B3B3B] z-50 max-h-80 overflow-y-auto">
+        <div className="absolute top-full left-0 right-0 mt-2 bg-card border-2 border-border shadow-[3px_3px_0px_0px_var(--border)] sm:shadow-[4px_4px_0px_0px_var(--border)] z-50 max-h-[60vh] sm:max-h-80 overflow-y-auto rounded-sm">
           {isLoading ? (
-            <div className="p-4 text-center text-dark/50">Searching...</div>
+            <div className="p-4 text-center text-text-muted text-sm">Searching...</div>
           ) : hasResults ? (
             <div>
               {/* Users */}
               {results.users.length > 0 && (
                 <div>
-                  <div className="px-4 py-2 text-xs font-bold uppercase text-dark/50 bg-cream border-b border-dark/10">
+                  <div className="px-3 sm:px-4 py-2 text-[10px] sm:text-xs font-bold uppercase text-text-muted bg-cream border-b border-border">
                     Developers
                   </div>
                   {results.users.map((user) => (
                     <button
                       key={user.id}
                       onClick={() => handleSelect('user', user.twitterHandle)}
-                      className="w-full px-4 py-3 flex items-center gap-3 hover:bg-cream transition-colors text-left"
+                      className="w-full px-3 sm:px-4 py-3 flex items-center gap-2.5 sm:gap-3 hover:bg-cream active:bg-cream transition-colors text-left"
                     >
-                      <div className="w-10 h-10 bg-gray-200 border border-dark overflow-hidden shrink-0">
+                      <div className="w-9 h-9 sm:w-10 sm:h-10 bg-surface border border-border overflow-hidden shrink-0 rounded-sm">
                         {user.avatarUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img src={user.avatarUrl} alt="" className="w-full h-full object-cover" />
                         ) : (
-                          <User className="w-full h-full p-2 text-dark/30" />
+                          <User className="w-full h-full p-2 text-text-muted" />
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="font-bold truncate">{user.twitterName}</div>
-                        <div className="text-sm text-dark/50 truncate">@{user.twitterHandle}</div>
+                        <div className="font-bold text-sm sm:text-base truncate text-dark">{user.twitterName}</div>
+                        <div className="text-xs sm:text-sm text-text-muted truncate">@{user.twitterHandle}</div>
                       </div>
-                      <div className="text-right">
-                        <div className={`font-bold font-display-mock ${getDevScoreColor(user.score).textClass}`}>
+                      <div className="text-right shrink-0">
+                        <div className={`font-stat text-sm sm:text-base ${getDevScoreColor(user.score).textClass}`}>
                           {user.score}
                         </div>
                         {user.rank && (
-                          <div className="text-xs text-dark/50">#{user.rank}</div>
+                          <div className="text-[10px] sm:text-xs text-text-muted">#{user.rank}</div>
                         )}
                       </div>
                     </button>
@@ -189,20 +190,20 @@ export function SearchBar() {
               {/* Wallet */}
               {results.wallet && (
                 <div>
-                  <div className="px-4 py-2 text-xs font-bold uppercase text-dark/50 bg-cream border-b border-dark/10">
+                  <div className="px-3 sm:px-4 py-2 text-[10px] sm:text-xs font-bold uppercase text-text-muted bg-cream border-b border-border">
                     Wallet
                   </div>
                   <button
                     onClick={() => handleSelect('wallet', results.wallet!.address)}
-                    className="w-full px-4 py-3 flex items-center gap-3 hover:bg-cream transition-colors text-left"
+                    className="w-full px-3 sm:px-4 py-3 flex items-center gap-2.5 sm:gap-3 hover:bg-cream active:bg-cream transition-colors text-left"
                   >
-                    <div className="w-10 h-10 bg-accent/20 border border-dark flex items-center justify-center shrink-0">
-                      <Wallet size={20} />
+                    <div className="w-9 h-9 sm:w-10 sm:h-10 bg-accent/20 border border-border flex items-center justify-center shrink-0 text-dark rounded-sm">
+                      <Wallet size={18} className="sm:w-5 sm:h-5" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="font-mono text-sm truncate">{results.wallet.address}</div>
+                      <div className="font-mono text-xs sm:text-sm truncate text-dark">{results.wallet.address}</div>
                       {results.wallet.label && (
-                        <div className="text-sm text-dark/50">{results.wallet.label}</div>
+                        <div className="text-xs sm:text-sm text-text-muted">{results.wallet.label}</div>
                       )}
                     </div>
                   </button>
@@ -212,26 +213,26 @@ export function SearchBar() {
               {/* Token */}
               {results.token && (
                 <div>
-                  <div className="px-4 py-2 text-xs font-bold uppercase text-dark/50 bg-cream border-b border-dark/10">
+                  <div className="px-3 sm:px-4 py-2 text-[10px] sm:text-xs font-bold uppercase text-text-muted bg-cream border-b border-border">
                     Token
                   </div>
                   <button
                     onClick={() => handleSelect('token', results.token!.creatorWallet)}
-                    className="w-full px-4 py-3 flex items-center gap-3 hover:bg-cream transition-colors text-left"
+                    className="w-full px-3 sm:px-4 py-3 flex items-center gap-2.5 sm:gap-3 hover:bg-cream active:bg-cream transition-colors text-left"
                   >
-                    <div className="w-10 h-10 bg-green-100 border border-dark flex items-center justify-center shrink-0">
-                      <Coins size={20} />
+                    <div className="w-9 h-9 sm:w-10 sm:h-10 bg-success/10 border border-border flex items-center justify-center shrink-0 text-dark rounded-sm">
+                      <Coins size={18} className="sm:w-5 sm:h-5" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="font-bold">{results.token.name}</div>
-                      <div className="text-sm text-dark/50">${results.token.symbol}</div>
+                      <div className="font-bold text-sm sm:text-base text-dark">{results.token.name}</div>
+                      <div className="text-xs sm:text-sm text-text-muted">${results.token.symbol}</div>
                     </div>
                   </button>
                 </div>
               )}
             </div>
           ) : query.length >= 2 ? (
-            <div className="p-4 text-center text-dark/50">No results found</div>
+            <div className="p-4 text-center text-text-muted text-sm">No results found</div>
           ) : null}
         </div>
       )}

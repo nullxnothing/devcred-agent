@@ -14,14 +14,14 @@ interface ScoreColorResult {
 }
 
 const SCORE_COLORS: Record<ScoreColorLevel, { textClass: string; bgClass: string; borderClass: string; glowClass: string; hex: string }> = {
-  legend:   { textClass: 'text-score-legend',   bgClass: 'bg-score-legend',   borderClass: 'border-score-legend',   glowClass: 'score-glow-legend',  hex: '#D4AF37' },
-  elite:    { textClass: 'text-score-elite',    bgClass: 'bg-score-elite',    borderClass: 'border-score-elite',    glowClass: 'score-glow-elite',   hex: '#A78BFA' },
-  proven:   { textClass: 'text-score-proven',   bgClass: 'bg-score-proven',   borderClass: 'border-score-proven',   glowClass: 'score-glow-proven',  hex: '#4ADE80' },
-  builder:  { textClass: 'text-score-builder',  bgClass: 'bg-score-builder',  borderClass: 'border-score-builder',  glowClass: '',                   hex: '#3B82F6' },
-  verified: { textClass: 'text-score-verified', bgClass: 'bg-score-verified', borderClass: 'border-score-verified', glowClass: '',                   hex: '#6B7280' },
-  low:      { textClass: 'text-score-low',      bgClass: 'bg-score-low',      borderClass: 'border-score-low',      glowClass: '',                   hex: '#F97316' },
-  danger:   { textClass: 'text-score-danger',   bgClass: 'bg-score-danger',   borderClass: 'border-score-danger',   glowClass: '',                   hex: '#DC2626' },
-  negative: { textClass: 'text-score-negative', bgClass: 'bg-score-negative', borderClass: 'border-score-negative', glowClass: '',                   hex: '#F87171' },
+  legend:   { textClass: 'text-score-legend',   bgClass: 'bg-score-legend',   borderClass: 'border-score-legend',   glowClass: 'score-glow-legend',  hex: 'var(--score-legend)' },
+  elite:    { textClass: 'text-score-elite',    bgClass: 'bg-score-elite',    borderClass: 'border-score-elite',    glowClass: 'score-glow-elite',   hex: 'var(--score-elite)' },
+  proven:   { textClass: 'text-score-proven',   bgClass: 'bg-score-proven',   borderClass: 'border-score-proven',   glowClass: 'score-glow-proven',  hex: 'var(--score-proven)' },
+  builder:  { textClass: 'text-score-builder',  bgClass: 'bg-score-builder',  borderClass: 'border-score-builder',  glowClass: '',                   hex: 'var(--score-builder)' },
+  verified: { textClass: 'text-score-verified', bgClass: 'bg-score-verified', borderClass: 'border-score-verified', glowClass: '',                   hex: 'var(--score-verified)' },
+  low:      { textClass: 'text-score-low',      bgClass: 'bg-score-low',      borderClass: 'border-score-low',      glowClass: '',                   hex: 'var(--score-low)' },
+  danger:   { textClass: 'text-score-danger',   bgClass: 'bg-score-danger',   borderClass: 'border-score-danger',   glowClass: '',                   hex: 'var(--score-danger)' },
+  negative: { textClass: 'text-score-negative', bgClass: 'bg-score-negative', borderClass: 'border-score-negative', glowClass: '',                   hex: 'var(--score-negative)' },
 };
 
 /**

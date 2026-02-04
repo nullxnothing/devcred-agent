@@ -8,7 +8,7 @@
  * In production, replace in-memory cache with Redis for horizontal scaling.
  */
 
-import { pool } from './db/pool';
+import { pool } from './db';
 
 // TTL constants by data type
 export const CACHE_TTL = {
@@ -17,7 +17,7 @@ export const CACHE_TTL = {
   devHoldings: 15 * 60 * 1000,         // 15 minutes for dev holding %
   tokenCreations: 24 * 60 * 60 * 1000, // 24 hours for what tokens wallet created
   walletScan: 60 * 60 * 1000,          // 1 hour for full wallet scan results
-  migrationStatus: 60 * 60 * 1000,     // 1 hour for migration status
+  migrationStatus: 10 * 60 * 1000,     // 10 minutes for migration status (fast graduations)
 } as const;
 
 // ============================================================
@@ -164,20 +164,8 @@ if (typeof setInterval !== 'undefined') {
 }
 
 // ============================================================
-// DATABASE CACHE (for cold data - token creations, scan results)
+// DATABASE CACHE (for cold data - scan results)
 // ============================================================
-
-export interface CachedWalletTokens {
-  walletAddress: string;
-  tokens: Array<{
-    mintAddress: string;
-    name: string;
-    symbol: string;
-    creationTimestamp?: number;
-    creationSignature?: string;
-  }>;
-  cachedAt: Date;
-}
 
 export interface CachedWalletScan {
   walletAddress: string;
@@ -192,51 +180,6 @@ export interface CachedWalletScan {
   totalTokensFound?: number;
   /** Whether scan was limited */
   tokensLimited?: boolean;
-}
-
-/**
- * Get cached wallet tokens (24h TTL)
- */
-export async function getCachedWalletTokens(
-  walletAddress: string
-): Promise<CachedWalletTokens['tokens'] | null> {
-  try {
-        const result = await pool.query(
-      `SELECT tokens FROM dk_wallet_tokens_cache
-       WHERE wallet_address = $1
-       AND cached_at > NOW() - INTERVAL '24 hours'`,
-      [walletAddress]
-    );
-
-    if (result.rows.length === 0) {
-      return null;
-    }
-
-    return result.rows[0].tokens;
-  } catch (error) {
-    console.error('Error getting cached wallet tokens:', error);
-    return null;
-  }
-}
-
-/**
- * Set cached wallet tokens
- */
-export async function setCachedWalletTokens(
-  walletAddress: string,
-  tokens: CachedWalletTokens['tokens']
-): Promise<void> {
-  try {
-        await pool.query(
-      `INSERT INTO dk_wallet_tokens_cache (wallet_address, tokens, cached_at)
-       VALUES ($1, $2, NOW())
-       ON CONFLICT (wallet_address)
-       DO UPDATE SET tokens = $2, cached_at = NOW()`,
-      [walletAddress, JSON.stringify(tokens)]
-    );
-  } catch (error) {
-    console.error('Error setting cached wallet tokens:', error);
-  }
 }
 
 /**
@@ -321,28 +264,5 @@ export async function invalidateWalletCache(walletAddress: string): Promise<void
     ]);
   } catch (error) {
     console.error('Error invalidating wallet cache:', error);
-  }
-}
-
-/**
- * Clean up expired cache entries (run periodically)
- */
-export async function cleanupExpiredCache(): Promise<{
-  tokensDeleted: number;
-  scansDeleted: number;
-}> {
-  try {
-        const [tokensResult, scansResult] = await Promise.all([
-      pool.query(`DELETE FROM dk_wallet_tokens_cache WHERE cached_at < NOW() - INTERVAL '24 hours'`),
-      pool.query(`DELETE FROM dk_wallet_scan_cache WHERE cached_at < NOW() - INTERVAL '1 hour'`),
-    ]);
-
-    return {
-      tokensDeleted: tokensResult.rowCount || 0,
-      scansDeleted: scansResult.rowCount || 0,
-    };
-  } catch (error) {
-    console.error('Error cleaning up expired cache:', error);
-    return { tokensDeleted: 0, scansDeleted: 0 };
   }
 }

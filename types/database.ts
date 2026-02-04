@@ -23,6 +23,11 @@ export interface Database {
           is_verified: boolean;
           primary_wallet: string | null;
           pumpfun_username: string | null;
+          scraped_at: string | null;
+          token_count: number;
+          migration_count: number;
+          rug_count: number;
+          top_mcap: number | null;
           created_at: string;
           updated_at: string;
         };
@@ -37,6 +42,11 @@ export interface Database {
           rank?: number | null;
           is_verified?: boolean;
           primary_wallet?: string | null;
+          scraped_at?: string | null;
+          token_count?: number;
+          migration_count?: number;
+          rug_count?: number;
+          top_mcap?: number | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -52,6 +62,11 @@ export interface Database {
           is_verified?: boolean;
           primary_wallet?: string | null;
           pumpfun_username?: string | null;
+          scraped_at?: string | null;
+          token_count?: number;
+          migration_count?: number;
+          rug_count?: number;
+          top_mcap?: number | null;
           created_at?: string;
           updated_at?: string;
         };

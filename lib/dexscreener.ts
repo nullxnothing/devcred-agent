@@ -26,6 +26,10 @@ const GECKOTERMINAL_BASE_URL = 'https://api.geckoterminal.com/api/v2';
 // Use centralized migration DEX list from constants
 const MIGRATION_DEX_IDS: readonly string[] = DEX_CONFIG.MIGRATION_DEX_IDS;
 
+// Minimum liquidity to consider a token "migrated" (filters test pools)
+// Pump.fun tokens graduate at ~$69K-75K market cap, depositing $12K-17K liquidity
+const MINIMUM_MIGRATION_LIQUIDITY = DEX_CONFIG.MINIMUM_LIQUIDITY_FOR_MIGRATION;
+
 export interface DexScreenerPair {
   chainId: string;
   dexId: string;
@@ -410,9 +414,11 @@ export async function checkMigrationStatus(tokenAddress: string): Promise<Migrat
       return checkMigrationStatusFromGecko(tokenAddress);
     }
 
-    // Find ALL pools on migration DEXes (no liquidity threshold)
+    // Find pools on migration DEXes with sufficient liquidity
+    // Filters out test pools and micro-liquidity pools that don't represent real migrations
     const migrationPools = pools.filter(pool =>
-      MIGRATION_DEX_IDS.includes(pool.dexId.toLowerCase())
+      MIGRATION_DEX_IDS.includes(pool.dexId.toLowerCase()) &&
+      (pool.liquidity?.usd || 0) >= MINIMUM_MIGRATION_LIQUIDITY
     );
 
     if (migrationPools.length === 0) {
@@ -491,12 +497,15 @@ async function checkMigrationStatusFromGecko(tokenAddress: string): Promise<Migr
       // Pool fetch failed, continue with what we have
     }
 
+    // Only mark as migrated if liquidity is above threshold
+    const hasSufficientLiquidity = liquidityUsd >= MINIMUM_MIGRATION_LIQUIDITY;
+
     return {
-      migrated: true,
-      migrationType: normalizeDexId(dexId),
+      migrated: hasSufficientLiquidity,
+      migrationType: hasSufficientLiquidity ? normalizeDexId(dexId) : null,
       pool: null, // Can't create DexScreenerPair from Gecko data
       liquidityUsd: liquidityUsd,
-      migratedAt: launchpad.completed_at ? new Date(launchpad.completed_at) : null,
+      migratedAt: hasSufficientLiquidity && launchpad.completed_at ? new Date(launchpad.completed_at) : null,
     };
   } catch (error) {
     console.error('GeckoTerminal migration check error:', error);
@@ -519,42 +528,6 @@ function normalizeDexId(dexId: string): MigrationDexType | null {
     return normalized as MigrationDexType;
   }
   return null;
-}
-
-/**
- * Search for tokens by name or symbol
- */
-export async function searchTokens(query: string): Promise<DexScreenerPair[]> {
-  const response = await rateLimitedFetch(
-    `${DEXSCREENER_BASE_URL}/latest/dex/search?q=${encodeURIComponent(query)}`
-  );
-
-  if (!response.ok) {
-    throw new Error(`DexScreener API error: ${response.status}`);
-  }
-
-  const data = await response.json();
-
-  // Filter to only Solana tokens
-  return (data.pairs || []).filter((pair: DexScreenerPair) => pair.chainId === 'solana');
-}
-
-/**
- * Get boosted tokens (promoted on DexScreener)
- */
-export async function getBoostedTokens(): Promise<DexScreenerPair[]> {
-  const response = await rateLimitedFetch(
-    `${DEXSCREENER_BASE_URL}/token-boosts/top/v1`
-  );
-
-  if (!response.ok) {
-    throw new Error(`DexScreener API error: ${response.status}`);
-  }
-
-  const data = await response.json();
-
-  // Filter to only Solana tokens
-  return (data || []).filter((token: DexScreenerPair) => token.chainId === 'solana');
 }
 
 /**
@@ -636,9 +609,10 @@ async function fetchTokenBatch(
       );
       const primaryPair = sortedPairs[0];
 
-      // Check if ANY pair is on a migration DEX (no liquidity threshold)
+      // Check if ANY pair is on a migration DEX WITH sufficient liquidity
       const isMigrated = tokenPairs.some((pair) =>
-        MIGRATION_DEX_IDS.includes(pair.dexId?.toLowerCase() || '')
+        MIGRATION_DEX_IDS.includes(pair.dexId?.toLowerCase() || '') &&
+        (pair.liquidity?.usd || 0) >= MINIMUM_MIGRATION_LIQUIDITY
       );
 
       // Find the migration DEX if migrated

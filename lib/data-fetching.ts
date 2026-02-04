@@ -1,8 +1,10 @@
-import { getLeaderboard as dbGetLeaderboard, getUserByTwitterHandle, getOrCreateSystemUser, getWalletsByUserId, getTokensForUserWallets, updateUser, addScoreHistory, recordProfileView, upsertToken, updateRanks, getKolByUserId, getKolStatusForUsers, getKolsWithUsers, getAllKols } from './db';
+import { getLeaderboard as dbGetLeaderboard, getUserByTwitterHandle, getOrCreateSystemUser, getWalletsByUserId, getTokensForUserWallets, updateUser, addScoreHistory, recordProfileView, upsertToken, updateUserRank, getKolByUserId, getKolStatusForUsers, getKolsWithUsers, getAllKols } from './db';
 import { getTierInfo, DevTier, calculateDevScore, calculateTokenScoresBatch, TokenScoreInput } from './scoring';
 import type { Kol } from '@/types/database';
 import { getMultipleTokensMarketData } from './dexscreener';
 import { detectRugPattern, getMigratedTokensFromSwapHistory, batchGetHolderCountsQuick } from './helius';
+import { getCachedHolderCount, setCachedHolderCount, invalidateWalletCache as invalidateDbWalletCache } from './cache';
+import { invalidateWalletCache as invalidateTxCache } from './helius';
 import { detectTokensCreatedByWallet } from './token-detection';
 import { PublicKey } from '@solana/web3.js';
 import {
@@ -12,7 +14,6 @@ import {
   getPrimaryWallet,
   isValidSolanaAddress,
   cleanTwitterHandle,
-  calculateProfileStats,
   DEFAULT_RUG_DETECTION,
   safeRugDetection,
   TokenDisplayData,
@@ -103,6 +104,10 @@ async function scanAndSaveTokens(
         failures.map(f => f.reason?.message || f.reason).join(', '));
     }
 
+    // Invalidate caches after successful scan to ensure fresh data on next request
+    await invalidateDbWalletCache(walletAddress).catch(() => {});
+    invalidateTxCache(walletAddress);
+
     return await getTokensForUserWallets(userId);
   } catch (error) {
     console.error('[scanAndSaveTokens] Fatal error:', error);
@@ -118,10 +123,31 @@ async function enrichTokensWithMarketData(
 ): Promise<TokenDisplayData[]> {
   const mintAddresses = tokens.map(t => t.mint_address);
 
-  const [marketDataMap, holderCountsMap] = await Promise.all([
+  // Check cache for holder counts first
+  const cachedCounts = new Map<string, number>();
+  const uncachedMints: string[] = [];
+
+  for (const mint of mintAddresses) {
+    const cached = getCachedHolderCount(mint);
+    if (cached !== null) {
+      cachedCounts.set(mint, cached);
+    } else {
+      uncachedMints.push(mint);
+    }
+  }
+
+  // Fetch market data and uncached holder counts in parallel
+  const [marketDataMap, freshHolderCounts] = await Promise.all([
     getMultipleTokensMarketData(mintAddresses),
-    batchGetHolderCountsQuick(mintAddresses),
+    uncachedMints.length > 0 ? batchGetHolderCountsQuick(uncachedMints) : new Map<string, number>(),
   ]);
+
+  // Cache fresh holder counts and merge with cached
+  const holderCountsMap = new Map<string, number>(cachedCounts);
+  for (const [mint, count] of freshHolderCounts) {
+    setCachedHolderCount(mint, count);
+    holderCountsMap.set(mint, count);
+  }
 
   const scoreInputs: TokenScoreInput[] = tokens.map((token) => {
     const marketData = marketDataMap.get(token.mint_address) || null;
@@ -281,18 +307,113 @@ export async function getProfileData(handle: string, viewerIp?: string, forceRef
     // Step 2: Get wallets and existing tokens
     const wallets = await getWalletsByUserId(user.id);
     let tokens = await getTokensForUserWallets(user.id);
-    let freshScan = false;
 
-    // Step 3: Scan for new tokens if needed
+    // Step 3: Check if we have a recent Axiom scrape (within 24h)
+    // If so, trust the cached score from extension instead of recalculating
+    const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
+    const userWithScrape = user as typeof user & { scraped_at?: string | null };
+    const hasRecentScrape = userWithScrape.scraped_at &&
+      (Date.now() - new Date(userWithScrape.scraped_at).getTime()) < CACHE_TTL;
+
+    if (hasRecentScrape && user.total_score > 0 && !forceRefresh) {
+      // Use cached Axiom score - skip recalculation
+      const cachedTier = (user.tier as DevTier) || 'unverified';
+      const tierInfo = getTierInfo(cachedTier);
+      const kol = await getKolByUserId(user.id);
+
+      if (viewerIp) {
+        recordProfileView(user.id, viewerIp).catch(() => {});
+      }
+
+      // Still get tokens for display, but don't recalculate score
+      const tokenScores: TokenDisplayData[] = tokens.map(mapTokenToDisplayData);
+      const migratedCount = tokenScores.filter(t => t.migrated).length;
+      const rugCount = tokenScores.filter(t => t.status === 'rug').length;
+      const avgScore = tokenScores.length > 0
+        ? tokenScores.reduce((sum, t) => sum + t.score, 0) / tokenScores.length
+        : 0;
+
+      return {
+        user: {
+          id: user.id,
+          twitterHandle: user.twitter_handle,
+          twitterName: user.twitter_name,
+          avatarUrl: user.avatar_url,
+          bio: user.bio,
+          isVerified: user.is_verified,
+          isKol: !!kol,
+          rank: user.rank,
+          createdAt: user.created_at,
+        },
+        kol: kol ? {
+          name: kol.name,
+          twitterUrl: kol.twitter_url,
+          telegramUrl: kol.telegram_url,
+          kolscanRank: kol.kolscan_rank,
+          pnlSol: kol.pnl_sol ? Number(kol.pnl_sol) : null,
+          wins: kol.wins,
+          losses: kol.losses,
+        } : null,
+        score: {
+          total: user.total_score,
+          tier: cachedTier,
+          tierName: tierInfo.name,
+          tierColor: tierInfo.color,
+          breakdown: {
+            baseScore: 500,
+            tokenCount: tokenScores.length,
+            migrationCount: migratedCount,
+            migrationBonus: 0,
+            marketCapBonus: 0,
+            tokenScoreBonus: 0,
+            rugPenalties: 0,
+            rugCount,
+            hardRugCount: 0,
+            accountAgeMonths: 0,
+            averageTokenScore: avgScore,
+          },
+        },
+        wallets: wallets.map((w) => ({
+          id: w.id,
+          address: w.address,
+          label: w.label,
+          isPrimary: w.is_primary,
+        })),
+        tokens: tokenScores.map(t => ({
+          mint: t.mint,
+          name: t.name,
+          symbol: t.symbol,
+          launchDate: t.launchDate,
+          migrated: t.migrated,
+          marketCap: t.marketCap,
+          volume24h: t.volume24h,
+          totalVolume: t.totalVolume,
+          athMarketCap: t.athMarketCap,
+          status: t.status,
+          score: t.score,
+          rugSeverity: t.rugSeverity,
+          creationVerified: t.creationVerified,
+        })),
+        stats: {
+          totalTokens: tokenScores.length,
+          migratedTokens: migratedCount,
+          avgTokenScore: avgScore,
+          rugCount,
+        },
+      };
+    }
+
+    // No recent scrape - calculate from token data (existing logic)
+
+    // Step 4: Scan for new tokens if needed
     if (tokens.length === 0 && wallets.length > 0) {
       const primaryWallet = getPrimaryWallet(wallets);
       if (primaryWallet) {
         tokens = await scanAndSaveTokens(primaryWallet.address, user.id);
-        freshScan = tokens.length > 0;
       }
     }
 
-    // Step 4: Calculate token scores
+    // Step 5: Calculate token scores
     // Use cached DB data by default (FAST) - only fetch live market data if explicitly requested
     const tokenScores: TokenDisplayData[] = forceRefresh
       ? await enrichTokensWithMarketData(tokens)
@@ -312,12 +433,12 @@ export async function getProfileData(handle: string, viewerIp?: string, forceRef
       accountCreatedAt: new Date(user.created_at),
     });
 
-    // Update user's total score in DB
-    await updateUser(user.id, { total_score: devScore.score });
+    // Update user's total score and rank in DB
+    await updateUser(user.id, { total_score: devScore.score, tier: devScore.tier });
     await addScoreHistory(user.id, devScore.score, devScore.breakdown).catch(() => {});
 
-    // Update all ranks (non-blocking)
-    updateRanks().catch(() => {});
+    // Update just this user's rank (non-blocking) - avoids full table scan
+    updateUserRank(user.id).catch(() => {});
 
     const tierInfo = getTierInfo(devScore.tier);
 

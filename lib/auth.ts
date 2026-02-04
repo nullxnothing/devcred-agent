@@ -1,11 +1,36 @@
 /**
  * NextAuth.js configuration for DevCred
  * Twitter OAuth for developer authentication
+ * Supports linking Twitter to existing wallet-based accounts
  */
 
 import { NextAuthOptions } from 'next-auth';
 import TwitterProvider from 'next-auth/providers/twitter';
-import { getUserByTwitterId, createUser, updateUser } from './db';
+import { cookies } from 'next/headers';
+import { jwtVerify, JWTPayload } from 'jose';
+import { getUserByTwitterId, getUserById, createUser, updateUser } from './db';
+
+const JWT_SECRET = new TextEncoder().encode(
+  process.env.JWT_SECRET || process.env.NEXTAUTH_SECRET || 'fallback-secret'
+);
+
+interface WalletSession extends JWTPayload {
+  userId: string;
+  walletAddress: string;
+}
+
+async function getWalletSession(): Promise<WalletSession | null> {
+  try {
+    const cookieStore = await cookies();
+    const sessionCookie = cookieStore.get('dk_session');
+    if (!sessionCookie?.value) return null;
+
+    const { payload } = await jwtVerify(sessionCookie.value, JWT_SECRET);
+    return payload as WalletSession;
+  } catch {
+    return null;
+  }
+}
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -29,32 +54,57 @@ export const authOptions: NextAuthOptions = {
       }
 
       try {
-        // Debug: Log the full profile object to see its structure
-        console.log('[DevCred Auth] Twitter profile received:', JSON.stringify(profile, null, 2));
-        console.log('[DevCred Auth] User object:', JSON.stringify(user, null, 2));
-
         // Twitter OAuth 2.0 profile structure: username can be at profile.data.username or profile.username
         const twitterProfile = profile as { data?: { username?: string; name?: string }; username?: string };
         const twitterHandle = twitterProfile?.data?.username || twitterProfile?.username || '';
+        const avatarUrl = user.image?.replace('_normal', '_400x400') || null;
 
-        console.log('[DevCred Auth] Extracted twitter handle:', twitterHandle);
+        console.log('[DevCred Auth] Twitter handle:', twitterHandle);
 
-        // Check if user exists
+        // Check if user is already logged in via wallet (linking flow)
+        const walletSession = await getWalletSession();
+
+        if (walletSession?.userId) {
+          // LINKING FLOW: User is logged in with wallet, link Twitter to their account
+          console.log('[DevCred Auth] Linking Twitter to wallet user:', walletSession.userId);
+
+          const existingWalletUser = await getUserById(walletSession.userId);
+
+          if (existingWalletUser) {
+            // Check if this Twitter account is already linked to another user
+            const existingTwitterUser = await getUserByTwitterId(account.providerAccountId);
+
+            if (existingTwitterUser && existingTwitterUser.id !== existingWalletUser.id) {
+              console.log('[DevCred Auth] Twitter already linked to different account');
+              // Return error URL
+              return `/profile/${existingWalletUser.primary_wallet}?twitter_error=${encodeURIComponent('This X account is already linked to another profile')}`;
+            }
+
+            // Link Twitter to existing wallet user
+            await updateUser(existingWalletUser.id, {
+              twitter_id: account.providerAccountId,
+              twitter_handle: twitterHandle || null,
+              twitter_name: user.name || null,
+              avatar_url: avatarUrl,
+            });
+
+            console.log('[DevCred Auth] Twitter linked successfully');
+            return true;
+          }
+        }
+
+        // NORMAL FLOW: Twitter-first login
         const existingUser = await getUserByTwitterId(account.providerAccountId);
 
         if (existingUser) {
           // Update user info if changed
-          // Use 400x400 avatar size instead of default 48x48 (_normal)
-          const avatarUrl = user.image?.replace('_normal', '_400x400') || existingUser.avatar_url;
           await updateUser(existingUser.id, {
             twitter_handle: twitterHandle || existingUser.twitter_handle,
             twitter_name: user.name || existingUser.twitter_name,
-            avatar_url: avatarUrl,
+            avatar_url: avatarUrl || existingUser.avatar_url,
           });
         } else {
           // Create new user
-          // Use 400x400 avatar size instead of default 48x48 (_normal)
-          const avatarUrl = user.image?.replace('_normal', '_400x400') || null;
           await createUser({
             twitter_id: account.providerAccountId,
             twitter_handle: twitterHandle,
@@ -98,6 +148,15 @@ export const authOptions: NextAuthOptions = {
     },
 
     async redirect({ url, baseUrl }) {
+      // Check if this is a Twitter linking callback
+      if (url.includes('twitter-link/callback')) {
+        // Get wallet session to redirect to their profile
+        const walletSession = await getWalletSession();
+        if (walletSession?.walletAddress) {
+          return `${baseUrl}/profile/${walletSession.walletAddress}?twitter_linked=true`;
+        }
+      }
+
       // After sign in, redirect to the dashboard/profile
       if (url.startsWith(baseUrl)) {
         // If callback URL is just the base or root, redirect to dashboard

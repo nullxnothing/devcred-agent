@@ -104,8 +104,8 @@ Enable crypto traders to quickly verify developer reputation before buying token
 - [ ] **Schema for score history breakdown** - Currently stores blob, should be structured
 
 ### Missing Endpoints
-- [ ] **`POST /api/auth/twitter/link`** - Link Twitter to wallet-based account (documented in plan.md as TODO)
-- [ ] **`DELETE /api/wallets/:address`** - Remove linked wallet (PRD specifies but not implemented)
+- [x] **`POST /api/auth/twitter/link`** - Link Twitter to wallet-based account ✅ Handled in NextAuth signIn callback
+- [x] **`DELETE /api/wallets/:address`** - Remove linked wallet ✅ Implemented at `/api/wallets/[address]/route.ts`
 - [ ] **`GET /api/profiles/:handle/score`** - Detailed score breakdown endpoint
 - [ ] **`GET /api/leaderboard/weekly`** - Weekly top performers
 

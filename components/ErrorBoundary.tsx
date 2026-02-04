@@ -36,7 +36,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
       return (
         <div className="min-h-[400px] flex items-center justify-center p-6">
-          <div className="max-w-md w-full bg-white border-2 border-dark/30 p-8 text-center">
+          <div className="max-w-md w-full bg-card border-2 border-dark/30 p-8 text-center">
             <div className="w-16 h-16 bg-accent/10 border-2 border-dashed border-accent/30 mx-auto mb-6 flex items-center justify-center">
               <span className="text-3xl">⚠️</span>
             </div>

@@ -1,12 +1,12 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { Plus, Wallet } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { WalletConnect } from '@/components/wallet/WalletConnect';
 import { ClaimLaunchModal } from './ClaimLaunchModal';
+import { useWalletAuth } from '@/components/providers/AuthProvider';
 
 interface ProfileActionsProps {
   profileUserId: string;
@@ -14,12 +14,12 @@ interface ProfileActionsProps {
 }
 
 export function ProfileActions({ profileUserId, hasWallets }: ProfileActionsProps) {
-  const { data: session } = useSession();
+  const { user } = useWalletAuth();
   const router = useRouter();
   const [showClaimModal, setShowClaimModal] = useState(false);
   const [showWalletConnect, setShowWalletConnect] = useState(false);
 
-  const isOwnProfile = session?.user?.id === profileUserId;
+  const isOwnProfile = user?.id === profileUserId;
 
   const handleWalletVerified = useCallback((walletAddress: string) => {
     // Refresh the page to show new wallet data
@@ -65,7 +65,7 @@ export function ProfileActions({ profileUserId, hasWallets }: ProfileActionsProp
           <div className="relative w-full max-w-md">
             <WalletConnect
               onVerificationComplete={handleWalletVerified}
-              className="shadow-[8px_8px_0px_0px_#3B3B3B]"
+              className="shadow-[8px_8px_0px_0px_var(--border)]"
             />
           </div>
         </div>
@@ -79,19 +79,19 @@ interface ConnectWalletButtonProps {
 }
 
 export function ConnectWalletButton({ profileUserId }: ConnectWalletButtonProps) {
-  const { data: session } = useSession();
+  const { user } = useWalletAuth();
   const router = useRouter();
   const [showWalletConnect, setShowWalletConnect] = useState(false);
 
-  const isOwnProfile = session?.user?.id === profileUserId;
+  const isOwnProfile = user?.id === profileUserId;
 
   const handleWalletVerified = useCallback((walletAddress: string) => {
     router.refresh();
     setShowWalletConnect(false);
   }, [router]);
 
-  // If not own profile or not logged in, show link to login
-  if (!session) {
+  // If not logged in, show link to login
+  if (!user) {
     return (
       <button
         onClick={() => router.push('/login')}
@@ -125,7 +125,7 @@ export function ConnectWalletButton({ profileUserId }: ConnectWalletButtonProps)
           <div className="relative w-full max-w-md">
             <WalletConnect
               onVerificationComplete={handleWalletVerified}
-              className="shadow-[8px_8px_0px_0px_#3B3B3B]"
+              className="shadow-[8px_8px_0px_0px_var(--border)]"
             />
           </div>
         </div>

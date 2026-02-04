@@ -144,7 +144,7 @@ export function ProfileHoverCard({
       {isVisible && (
         <div 
           ref={cardRef}
-          className="absolute z-[100] w-80 bg-dark border-2 border-accent/30 rounded-xl shadow-2xl shadow-black/70 overflow-hidden"
+          className="absolute z-[100] w-80 bg-card border-2 border-border rounded-xl shadow-2xl overflow-hidden"
           style={cardStyle}
           onMouseEnter={() => {
             if (leaveTimeoutRef.current) {
@@ -158,7 +158,7 @@ export function ProfileHoverCard({
           <div className="h-1 bg-gradient-to-r from-accent via-amber-400 to-accent" />
           
           {/* Header */}
-          <div className="p-4 border-b border-cream/10">
+          <div className="p-4 border-b border-border">
             <div className="flex items-start gap-3">
               <Avatar
                 src={avatarUrl}
@@ -167,10 +167,10 @@ export function ProfileHoverCard({
                 className="border-2 border-accent/50 shrink-0"
               />
               <div className="flex-1 min-w-0">
-                <h3 className="font-bold text-cream text-lg leading-tight truncate">
+                <h3 className="font-bold text-dark text-lg leading-tight truncate">
                   {displayName}
                 </h3>
-                <p className="text-cream/50 text-sm font-mono truncate">
+                <p className="text-text-muted text-sm font-mono truncate">
                   {displayHandle}
                 </p>
                 <div className="mt-2">
@@ -186,21 +186,21 @@ export function ProfileHoverCard({
           </div>
 
           {/* Score + Rank */}
-          <div className="px-4 py-3 bg-cream/5 flex items-center justify-between border-b border-cream/10">
+          <div className="px-4 py-3 bg-cream flex items-center justify-between border-b border-border">
             <div>
-              <div className="text-[10px] uppercase tracking-wider text-cream/50 mb-0.5">
+              <div className="text-[10px] uppercase tracking-wider text-text-muted mb-0.5">
                 DevCred Score
               </div>
-              <div className={`text-3xl font-black font-display-mock ${scoreColor.textClass}`}>
+              <div className={`text-3xl font-stat ${scoreColor.textClass}`}>
                 {score}
               </div>
             </div>
             {rank && (
               <div className="text-right">
-                <div className="text-[10px] uppercase tracking-wider text-cream/50 mb-0.5">
+                <div className="text-[10px] uppercase tracking-wider text-text-muted mb-0.5">
                   Rank
                 </div>
-                <div className="text-3xl font-black font-display-mock text-cream">
+                <div className="text-3xl font-stat text-dark">
                   #{rank}
                 </div>
               </div>
@@ -211,7 +211,7 @@ export function ProfileHoverCard({
           <div className="px-4 py-3">
             <div className="flex items-center gap-2 mb-3">
               <Award size={14} className="text-accent" />
-              <span className="text-[10px] uppercase tracking-wider text-cream/50 font-bold">
+              <span className="text-[10px] uppercase tracking-wider text-text-muted font-bold">
                 Achievements
               </span>
             </div>
@@ -231,7 +231,7 @@ export function ProfileHoverCard({
                 ))}
               </div>
             ) : (
-              <p className="text-cream/40 text-sm italic py-4 text-center">
+              <p className="text-text-muted text-sm italic py-4 text-center">
                 No achievements earned yet
               </p>
             )}
@@ -240,7 +240,7 @@ export function ProfileHoverCard({
           {/* View Profile Link */}
           <Link
             href={`/profile/${encodeURIComponent(profileIdentifier)}`}
-            className="flex items-center justify-center gap-2 px-4 py-3 bg-cream/10 hover:bg-cream/20 border-t border-cream/10 text-cream/70 hover:text-cream text-sm font-bold uppercase tracking-wide transition-colors"
+            className="flex items-center justify-center gap-2 px-4 py-3 bg-cream hover:bg-accent/10 border-t border-border text-text-muted hover:text-accent text-sm font-bold uppercase tracking-wide transition-colors"
           >
             View Full Profile
             <ExternalLink size={14} />

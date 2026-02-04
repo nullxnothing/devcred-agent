@@ -88,14 +88,14 @@ export function ShareButton({
           />
 
           {/* Dropdown Menu */}
-          <div className="absolute right-0 mt-2 w-56 bg-white border-2 border-dark shadow-[4px_4px_0px_0px_#3B3B3B] z-50">
+          <div className="absolute right-0 mt-2 w-56 bg-card border-2 border-border shadow-[4px_4px_0px_0px_var(--border)] z-50">
             <div className="p-2">
               <button
                 onClick={handleCopyLink}
                 className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-accent/10 transition-colors text-dark"
               >
                 {copied ? (
-                  <Check size={18} className="text-green-600" />
+                  <Check size={18} className="text-success" />
                 ) : (
                   <Copy size={18} className="text-dark" />
                 )}

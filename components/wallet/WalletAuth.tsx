@@ -149,8 +149,8 @@ export function WalletAuth({ onAuthComplete, redirectTo = '/dashboard', classNam
     };
 
     return (
-      <div className={`p-6 border-4 border-dark bg-white ${className}`}>
-        <div className="flex items-center gap-3 text-green-600 mb-4">
+      <div className={`p-6 border-4 border-dark bg-card ${className}`}>
+        <div className="flex items-center gap-3 text-success mb-4">
           <CheckCircle size={24} />
           <span className="font-bold text-lg">{authData.message}</span>
         </div>
@@ -186,15 +186,15 @@ export function WalletAuth({ onAuthComplete, redirectTo = '/dashboard', classNam
   // Error state
   if (status === 'error') {
     return (
-      <div className={`p-6 border-4 border-dark bg-white ${className}`}>
-        <div className="flex items-center gap-3 text-red-600 mb-4">
+      <div className={`p-6 border-4 border-dark bg-card ${className}`}>
+        <div className="flex items-center gap-3 text-error mb-4">
           <AlertCircle size={24} />
           <span className="font-bold">Authentication Failed</span>
         </div>
         <p className="text-dark/70 mb-4">{error}</p>
         <button
           onClick={handleRetry}
-          className="w-full h-12 bg-dark text-white font-bold uppercase tracking-tight hover:bg-dark/90 transition-colors"
+          className="w-full h-12 bg-dark text-cream font-bold uppercase tracking-tight hover:bg-dark/90 transition-colors"
         >
           Try Again
         </button>
@@ -211,7 +211,7 @@ export function WalletAuth({ onAuthComplete, redirectTo = '/dashboard', classNam
     };
 
     return (
-      <div className={`p-6 border-4 border-dark bg-white ${className}`}>
+      <div className={`p-6 border-4 border-dark bg-card ${className}`}>
         <div className="flex flex-col items-center gap-4">
           <Loader2 size={32} className="animate-spin text-accent" />
           <span className="font-bold text-dark">{statusMessages[status]}</span>
@@ -227,7 +227,7 @@ export function WalletAuth({ onAuthComplete, redirectTo = '/dashboard', classNam
 
   // Idle state - show connect button
   return (
-    <div className={`p-6 border-4 border-dark bg-white ${className}`}>
+    <div className={`p-6 border-4 border-dark bg-card ${className}`}>
       <div className="flex flex-col items-center text-center mb-6">
         <div className="w-16 h-16 bg-accent/10 border-2 border-dark flex items-center justify-center mb-4">
           <Wallet size={32} className="text-accent" />
@@ -240,7 +240,7 @@ export function WalletAuth({ onAuthComplete, redirectTo = '/dashboard', classNam
 
       <button
         onClick={handleConnect}
-        className="w-full h-14 bg-accent text-white font-black uppercase tracking-tight hover:bg-accent/90 transition-colors flex items-center justify-center gap-3 border-2 border-dark shadow-[4px_4px_0px_0px_#1a1a1a]"
+        className="w-full h-14 bg-accent text-cream font-black uppercase tracking-tight hover:bg-accent/90 transition-colors flex items-center justify-center gap-3 border-2 border-dark shadow-[4px_4px_0px_0px_var(--border)]"
       >
         <Wallet size={20} />
         Connect Wallet

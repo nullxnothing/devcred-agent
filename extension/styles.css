@@ -1,549 +1,132 @@
-/* DevCred Extension - Axiom-Native Styles */
+/* DevKarma Extension - Minimal Brand Theme */
 
-/* Small inline badge for token cards - matches Axiom's pill style */
+/* Brand colors from devcred.fun */
+:root {
+  --dc-cream: #FBF0DF;
+  --dc-dark: #3B3B3B;
+  --dc-accent: #2e4a3b;
+  --dc-green: #22c55e;
+  --dc-yellow: #eab308;
+  --dc-orange: #f97316;
+  --dc-red: #ef4444;
+  --dc-gold: #FFD700;
+}
+
+/* ===== Compact Badge (injected next to DA) ===== */
 .devcred-badge {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
-  padding: 1px 5px;
-  background: rgba(255, 255, 255, 0.06);
-  border-radius: 4px;
-  font-size: 10px;
-  font-weight: 600;
+  gap: 5px;
+  padding: 4px 10px;
+  background: var(--dc-cream);
+  border: 2px solid var(--dc-dark);
+  font-family: 'DM Sans', -apple-system, sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--dc-dark);
   cursor: pointer;
   transition: all 0.15s ease;
-  margin-left: 4px;
-  vertical-align: middle;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  border: 1px solid transparent;
+  margin-left: 8px;
+  box-shadow: 2px 2px 0 var(--dc-dark);
 }
 
 .devcred-badge:hover {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 255, 255, 0.1);
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 var(--dc-dark);
 }
 
-/* Traffic light dot */
+.devcred-badge:active {
+  transform: translate(2px, 2px);
+  box-shadow: none;
+}
+
+/* Traffic light indicator */
 .devcred-light {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   flex-shrink: 0;
 }
 
-/* Score text */
 .devcred-score {
-  color: rgba(255, 255, 255, 0.9);
   font-variant-numeric: tabular-nums;
+  letter-spacing: -0.5px;
 }
 
-/* Tier-specific badge backgrounds - matching Axiom's color language */
+/* Tier-based badge colors */
+.devcred-badge[data-tier="legend"],
 .devcred-badge[data-tier="elite"] {
-  background: rgba(34, 197, 94, 0.12);
-  border-color: rgba(34, 197, 94, 0.2);
-}
-.devcred-badge[data-tier="elite"] .devcred-score {
-  color: #22c55e;
-}
-
-.devcred-badge[data-tier="proven"] {
-  background: rgba(234, 179, 8, 0.12);
-  border-color: rgba(234, 179, 8, 0.2);
-}
-.devcred-badge[data-tier="proven"] .devcred-score {
-  color: #eab308;
-}
-
-.devcred-badge[data-tier="new"] {
-  background: rgba(249, 115, 22, 0.12);
-  border-color: rgba(249, 115, 22, 0.2);
-}
-.devcred-badge[data-tier="new"] .devcred-score {
-  color: #f97316;
+  background: var(--dc-accent);
+  color: var(--dc-cream);
+  border-color: var(--dc-dark);
 }
 
 .devcred-badge[data-tier="penalized"] {
-  background: rgba(239, 68, 68, 0.15);
-  border-color: rgba(239, 68, 68, 0.25);
-}
-.devcred-badge[data-tier="penalized"] .devcred-score {
-  color: #ef4444;
+  background: var(--dc-red);
+  color: white;
+  border-color: #991b1b;
 }
 
-.devcred-badge[data-tier="unknown"] {
-  background: rgba(255, 255, 255, 0.04);
-}
-.devcred-badge[data-tier="unknown"] .devcred-score {
-  color: rgba(255, 255, 255, 0.4);
+/* Rug warning - subtle pulse */
+.devcred-badge.has-rugs {
+  animation: rug-pulse 2s ease-in-out infinite;
 }
 
-/* Loading spinner */
-.devcred-badge.devcred-loading {
-  min-width: 32px;
-  justify-content: center;
-  background: rgba(255, 255, 255, 0.04);
-}
-
-.devcred-spinner {
-  width: 8px;
-  height: 8px;
-  border: 1.5px solid rgba(255, 255, 255, 0.2);
-  border-top-color: rgba(255, 255, 255, 0.6);
-  border-radius: 50%;
-  animation: devcred-spin 0.6s linear infinite;
-}
-
-@keyframes devcred-spin {
-  to { transform: rotate(360deg); }
-}
-
-/* ===== Detail Page Badge - Token Info Panel Style ===== */
-.devcred-badge-detail {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  margin: 6px 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-}
-
-.devcred-badge-detail:hover {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.12);
-}
-
-.devcred-detail-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex: 1;
-}
-
-.devcred-light-lg {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.devcred-detail-label {
-  font-size: 11px;
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.5);
-  letter-spacing: 0.3px;
-}
-
-.devcred-detail-score {
-  font-size: 14px;
-  font-weight: 700;
-  color: #fff;
-  font-variant-numeric: tabular-nums;
-  margin-left: auto;
-}
-
-.devcred-detail-score .devcred-max {
-  font-size: 10px;
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.35);
-}
-
-.devcred-detail-info {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 1px;
-}
-
-.devcred-tier {
-  font-size: 9px;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.6);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.devcred-status {
-  font-size: 9px;
-  font-weight: 600;
-}
-
-/* Detail badge tier colors */
-.devcred-badge-detail[data-tier="elite"] {
-  border-color: rgba(34, 197, 94, 0.25);
-}
-.devcred-badge-detail[data-tier="elite"] .devcred-detail-score {
-  color: #22c55e;
-}
-
-.devcred-badge-detail[data-tier="proven"] {
-  border-color: rgba(234, 179, 8, 0.25);
-}
-.devcred-badge-detail[data-tier="proven"] .devcred-detail-score {
-  color: #eab308;
-}
-
-.devcred-badge-detail[data-tier="new"] {
-  border-color: rgba(249, 115, 22, 0.25);
-}
-.devcred-badge-detail[data-tier="new"] .devcred-detail-score {
-  color: #f97316;
-}
-
-.devcred-badge-detail[data-tier="penalized"] {
-  border-color: rgba(239, 68, 68, 0.3);
-  background: rgba(239, 68, 68, 0.08);
-}
-.devcred-badge-detail[data-tier="penalized"] .devcred-detail-score {
-  color: #ef4444;
-}
-
-/* ===== Subtle Animations ===== */
-
-/* Gentle pulse for risky devs */
-@keyframes devcred-pulse-danger {
+@keyframes rug-pulse {
   0%, 100% { opacity: 1; }
-  50% { opacity: 0.6; }
+  50% { opacity: 0.85; }
 }
 
-.devcred-badge[data-tier="penalized"] .devcred-light {
-  animation: devcred-pulse-danger 2s ease-in-out infinite;
+/* Loading state */
+.devcred-badge.loading {
+  opacity: 0.7;
 }
 
-/* Subtle glow for elite */
-.devcred-badge[data-tier="elite"]:hover .devcred-light {
-  box-shadow: 0 0 6px rgba(34, 197, 94, 0.6);
+.devcred-badge.loading .devcred-score {
+  animation: loading-fade 1s ease-in-out infinite;
 }
 
-/* ===== Alternative Compact Style ===== */
-/* Use this class for extra-tight spaces */
-.devcred-badge.devcred-compact {
-  padding: 0 4px;
-  gap: 2px;
-  font-size: 9px;
+@keyframes loading-fade {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
 }
 
-.devcred-badge.devcred-compact .devcred-light {
-  width: 5px;
-  height: 5px;
-}
-
-/* ===== Score-only variant ===== */
-/* Shows just colored score, no dot */
-.devcred-badge.devcred-score-only .devcred-light {
-  display: none;
-}
-
-.devcred-badge.devcred-score-only {
-  padding: 0 3px;
-}
-
-/* ===== DevCred Card Component ===== */
-.devcred-card {
-  margin: 8px 0;
-  background: linear-gradient(135deg, rgba(20, 20, 30, 0.95) 0%, rgba(15, 15, 25, 0.98) 100%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  overflow: hidden;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-}
-
-.devcred-card:hover {
-  border-color: rgba(255, 255, 255, 0.15);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-  transform: translateY(-1px);
-}
-
-/* Card Header */
-.devcred-card-header {
-  display: flex;
+/* ===== Rug Warning Tag ===== */
+.devcred-rug-tag {
+  display: inline-flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 8px 12px;
-  background: rgba(255, 255, 255, 0.03);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-.devcred-card-logo {
-  font-size: 11px;
-  font-weight: 700;
-  color: #fff;
-  letter-spacing: 0.5px;
-}
-
-.devcred-card-subtitle {
-  font-size: 9px;
-  color: rgba(255, 255, 255, 0.4);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-/* Card Body */
-.devcred-card-body {
-  padding: 12px;
-}
-
-.devcred-card-loading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 20px 12px;
-  color: rgba(255, 255, 255, 0.5);
-  font-size: 11px;
-}
-
-/* Score Section */
-.devcred-card-score-section {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
-.devcred-card-score-circle {
-  width: 52px;
-  height: 52px;
-  border-radius: 50%;
-  border: 2px solid;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.3);
-}
-
-.devcred-card-score-value {
-  font-size: 18px;
-  font-weight: 700;
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-}
-
-.devcred-card-score-max {
-  font-size: 9px;
-  color: rgba(255, 255, 255, 0.3);
-  margin-top: 1px;
-}
-
-.devcred-card-tier {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.devcred-card-tier-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-}
-
-.devcred-card-tier-name {
-  font-size: 13px;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.9);
-}
-
-/* Stats Row */
-.devcred-card-stats {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 10px;
-}
-
-.devcred-card-stat {
-  flex: 1;
-  text-align: center;
-  padding: 6px 4px;
-  background: rgba(255, 255, 255, 0.04);
-  border-radius: 6px;
-}
-
-.devcred-card-stat-value {
-  display: block;
-  font-size: 14px;
-  font-weight: 700;
-  color: #fff;
-  font-variant-numeric: tabular-nums;
-}
-
-.devcred-card-stat-label {
-  display: block;
-  font-size: 9px;
-  color: rgba(255, 255, 255, 0.45);
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-  margin-top: 2px;
-}
-
-.devcred-stat-danger .devcred-card-stat-value {
-  color: #ef4444;
-}
-
-.devcred-stat-danger {
-  background: rgba(239, 68, 68, 0.1);
-}
-
-/* Status Message */
-.devcred-card-status {
-  font-size: 10px;
-  padding: 6px 10px;
-  border-radius: 6px;
-  text-align: center;
-  font-weight: 500;
-}
-
-.devcred-status-success {
-  background: rgba(34, 197, 94, 0.15);
-  color: #22c55e;
-}
-
-.devcred-status-good {
-  background: rgba(234, 179, 8, 0.12);
-  color: #eab308;
-}
-
-.devcred-status-neutral {
-  background: rgba(255, 255, 255, 0.05);
-  color: rgba(255, 255, 255, 0.6);
-}
-
-.devcred-status-danger {
-  background: rgba(239, 68, 68, 0.15);
-  color: #ef4444;
-}
-
-/* Card Footer */
-.devcred-card-footer {
-  padding: 8px 12px;
-  background: rgba(255, 255, 255, 0.02);
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
-  text-align: center;
-}
-
-.devcred-card-footer span {
-  font-size: 10px;
-  color: rgba(255, 255, 255, 0.4);
-  transition: color 0.15s ease;
-}
-
-.devcred-card:hover .devcred-card-footer span {
-  color: rgba(255, 255, 255, 0.7);
-}
-
-/* Tier info section */
-.devcred-card-tier-info {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.devcred-card-mcap {
-  font-size: 10px;
-  color: rgba(255, 255, 255, 0.5);
-}
-
-/* Stat variants */
-.devcred-stat-good {
-  background: rgba(34, 197, 94, 0.1);
-}
-
-.devcred-stat-good .devcred-card-stat-value {
-  color: #22c55e;
-}
-
-/* Footer with source indicator */
-.devcred-card-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.devcred-card-source {
-  font-size: 9px;
-  color: rgba(34, 197, 94, 0.7);
-  font-weight: 500;
-}
-
-/* ===== Wallet Section (DA replacement) ===== */
-.devcred-wallet-section {
-  margin-bottom: 12px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-.devcred-wallet-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 0;
-}
-
-.devcred-wallet-label {
-  font-size: 10px;
-  color: rgba(255, 255, 255, 0.45);
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-  min-width: 65px;
-}
-
-.devcred-wallet-address {
-  font-size: 12px;
-  font-family: 'SF Mono', Monaco, 'Courier New', monospace;
-  color: rgba(255, 255, 255, 0.85);
-  flex: 1;
-}
-
-.devcred-funding-amount {
-  font-size: 11px;
-  font-weight: 600;
-  color: #eab308;
+  gap: 3px;
   padding: 2px 6px;
-  background: rgba(234, 179, 8, 0.12);
-  border-radius: 4px;
-}
-
-/* Copy Button */
-.devcred-copy-btn {
+  background: var(--dc-red);
+  color: white;
   font-size: 9px;
-  font-weight: 600;
-  padding: 3px 8px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 4px;
-  color: rgba(255, 255, 255, 0.6);
-  cursor: pointer;
-  transition: all 0.15s ease;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.5px;
+  margin-left: 6px;
+  border: 1px solid #991b1b;
 }
 
-.devcred-copy-btn:hover {
-  background: rgba(255, 255, 255, 0.15);
-  border-color: rgba(255, 255, 255, 0.2);
-  color: rgba(255, 255, 255, 0.9);
+/* ===== Mini Tooltip on Hover ===== */
+.devcred-badge[data-tooltip]:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 6px 10px;
+  background: var(--dc-dark);
+  color: var(--dc-cream);
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+  border: 2px solid var(--dc-dark);
+  z-index: 9999;
 }
 
-.devcred-copy-btn.copied {
-  background: rgba(34, 197, 94, 0.2);
-  border-color: rgba(34, 197, 94, 0.3);
-  color: #22c55e;
+.devcred-badge {
+  position: relative;
 }
 
-/* Profile link in footer */
-.devcred-profile-link {
-  cursor: pointer;
-  transition: color 0.15s ease;
-}
-
-.devcred-profile-link:hover {
-  color: rgba(255, 255, 255, 0.9) !important;
-  text-decoration: underline;
-}
+/* ===== DEPRECATED: Full card styles removed ===== */
+/* Now using compact badge only */

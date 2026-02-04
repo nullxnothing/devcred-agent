@@ -41,3 +41,7 @@ yarn-error.log*
 next-env.d.ts
 
 .vercel
+# Planning docs
+TRADER_FEATURES.md
+.planning/intel/
+DYLANUSE*

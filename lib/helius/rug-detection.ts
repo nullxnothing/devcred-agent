@@ -52,7 +52,7 @@ export async function getTokenTransfersForWallet(
   mintAddress: string,
   options: { limit?: number } = {}
 ): Promise<WalletTransaction[]> {
-  const { limit = 100 } = options;
+  const { limit = 500 } = options;
 
   const transactions = await getWalletTransactions(walletAddress, {
     limit,
@@ -70,7 +70,8 @@ export async function detectRugPattern(
   launchTimestamp?: number
 ): Promise<RugDetectionResult> {
   try {
-    const transfers = await getTokenTransfersForWallet(devWallet, mintAddress, { limit: 200 });
+    // Increased from 200 to 500 for more accurate rug detection on high-volume tokens
+    const transfers = await getTokenTransfersForWallet(devWallet, mintAddress, { limit: 500 });
 
     if (transfers.length === 0) {
       return {
