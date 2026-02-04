@@ -1,8 +1,127 @@
-// DevCred Extension - Axiom Integration
+// DevKarma Extension - Dual Mode Badge Injection
+// Mini badge in header (right side) + Full card replacing DA section
 
 const API_BASE = 'https://devkarmaagent-production.up.railway.app';
+const SITE_BASE = 'https://devkarma.fun';
 const CACHE_TTL = 5 * 60 * 1000;
+const MAX_CACHE_SIZE = 100; // Prevent memory leak
+const REQUEST_TIMEOUT = 10000; // 10 second timeout
+
+// LRU-style cache with size limit
 const scoreCache = new Map();
+const injectedWallets = new Set();
+
+function cleanupCache() {
+  // Remove oldest entries if cache is too large
+  if (scoreCache.size > MAX_CACHE_SIZE) {
+    const entriesToDelete = scoreCache.size - MAX_CACHE_SIZE;
+    const iterator = scoreCache.keys();
+    for (let i = 0; i < entriesToDelete; i++) {
+      scoreCache.delete(iterator.next().value);
+    }
+  }
+  // Clear injected wallets periodically to allow re-injection on navigation
+  if (injectedWallets.size > MAX_CACHE_SIZE) {
+    injectedWallets.clear();
+  }
+}
+
+let settings = { showCard: true, showBadge: true, enabled: true };
+
+// ============ THEME DETECTION ============
+function getAxiomTheme() {
+  // Check body/html background color to detect theme
+  const bodyBg = getComputedStyle(document.body).backgroundColor;
+  const htmlBg = getComputedStyle(document.documentElement).backgroundColor;
+
+  // Parse RGB values
+  const parseRgb = (color) => {
+    const match = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+    if (match) {
+      return { r: parseInt(match[1]), g: parseInt(match[2]), b: parseInt(match[3]) };
+    }
+    return null;
+  };
+
+  const bg = parseRgb(bodyBg) || parseRgb(htmlBg);
+  if (!bg) return 'dark'; // Default to dark
+
+  // Calculate luminance
+  const luminance = (0.299 * bg.r + 0.587 * bg.g + 0.114 * bg.b) / 255;
+
+  // Detect specific themes based on color
+  if (luminance > 0.7) return 'light';
+  if (bg.r < 20 && bg.g < 20 && bg.b < 30) return 'dark'; // Pure dark
+  if (bg.r < 30 && bg.g < 25 && bg.b < 40) return 'midnight'; // Bluish dark
+
+  return luminance > 0.5 ? 'light' : 'dark';
+}
+
+function getThemeColors() {
+  const theme = getAxiomTheme();
+  console.log('[DevKarma] Detected theme:', theme);
+
+  if (theme === 'light') {
+    return {
+      cardBg: 'rgba(255,255,255,0.95)',
+      cardBorder: 'rgba(0,0,0,0.1)',
+      badgeBg: 'rgba(0,0,0,0.04)',
+      badgeBorder: 'rgba(0,0,0,0.1)',
+      badgeHoverBg: 'rgba(0,0,0,0.08)',
+      badgeHoverBorder: 'rgba(0,0,0,0.15)',
+      textPrimary: 'rgba(0,0,0,0.9)',
+      textSecondary: 'rgba(0,0,0,0.6)',
+      textMuted: 'rgba(0,0,0,0.4)',
+      divider: 'rgba(0,0,0,0.08)',
+      sectionBg: 'rgba(0,0,0,0.03)',
+      btnBg: 'rgba(0,0,0,0.05)',
+      btnBorder: 'rgba(0,0,0,0.1)',
+      btnText: 'rgba(0,0,0,0.5)',
+      scoreBg: 'rgba(255,255,255,0.8)',
+    };
+  }
+
+  // Dark / Midnight themes
+  return {
+    cardBg: '#0d0d14',
+    cardBorder: 'rgba(255,255,255,0.08)',
+    badgeBg: 'rgba(255,255,255,0.03)',
+    badgeBorder: 'rgba(255,255,255,0.08)',
+    badgeHoverBg: 'rgba(255,255,255,0.06)',
+    badgeHoverBorder: 'rgba(255,255,255,0.15)',
+    textPrimary: 'rgba(255,255,255,0.9)',
+    textSecondary: 'rgba(255,255,255,0.6)',
+    textMuted: 'rgba(255,255,255,0.4)',
+    divider: 'rgba(255,255,255,0.06)',
+    sectionBg: 'rgba(255,255,255,0.02)',
+    btnBg: 'rgba(255,255,255,0.06)',
+    btnBorder: 'rgba(255,255,255,0.1)',
+    btnText: 'rgba(255,255,255,0.5)',
+    scoreBg: 'rgba(0,0,0,0.3)',
+  };
+}
+
+chrome.storage.local.get(['showCard', 'showBadge', 'enabled'], (result) => {
+  settings.showCard = result.showCard !== false;
+  settings.showBadge = result.showBadge !== false;
+  settings.enabled = result.enabled !== false;
+});
+
+chrome.runtime.onMessage.addListener((msg) => {
+  if (msg.type === 'SETTINGS_CHANGED') {
+    if (msg.showCard !== undefined) settings.showCard = msg.showCard;
+    if (msg.showBadge !== undefined) settings.showBadge = msg.showBadge;
+    if (msg.enabled !== undefined) settings.enabled = msg.enabled;
+    injectedWallets.clear();
+    document.querySelectorAll('.devkarma-card, .devkarma-badge').forEach(el => el.remove());
+    // Restore hidden DA sections
+    document.querySelectorAll('[data-devkarma-hidden]').forEach(el => {
+      el.style.display = '';
+      el.removeAttribute('data-devkarma-hidden');
+    });
+    if (settings.enabled) setTimeout(scan, 100);
+  }
+});
 
 async function fetchDevScore(wallet) {
   if (!wallet || wallet.length < 32) return null;
@@ -10,44 +129,54 @@ async function fetchDevScore(wallet) {
   if (cached && Date.now() - cached.timestamp < CACHE_TTL) return cached.data;
 
   try {
-    const res = await fetch(`${API_BASE}/api/reputation/${wallet}`);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+
+    const res = await fetch(`${API_BASE}/api/reputation/${wallet}`, {
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+
     if (!res.ok) return { score: 0, tier: 'unknown' };
     const data = await res.json();
     scoreCache.set(wallet, { data, timestamp: Date.now() });
+    cleanupCache(); // Prevent memory leak
     return data;
   } catch (e) {
+    console.log('[DevKarma] API error:', e.name === 'AbortError' ? 'Request timeout' : e);
     return { score: 0, tier: 'unknown' };
   }
 }
 
-function getColor(data) {
-  const score = parseFloat(data?.score) || 0;
-  if (!data || score === 0) return '#666';
-  if (data.tier === 'penalized' || score < 150) return '#ef4444';
+function getTier(score) {
+  if (score >= 700) return 'legend';
+  if (score >= 600) return 'elite';
+  if (score >= 500) return 'rising_star';
+  if (score >= 450) return 'proven';
+  if (score >= 300) return 'builder';
+  if (score >= 150) return 'verified';
+  if (score > 0) return 'new';
+  return 'unknown';
+}
+
+function getTierName(tier) {
+  const names = {
+    legend: 'Legend', elite: 'Elite', rising_star: 'Rising Star',
+    proven: 'Proven', builder: 'Builder', verified: 'Verified',
+    new: 'New', unknown: 'Unknown'
+  };
+  return names[tier] || 'Unknown';
+}
+
+function getColor(score) {
   if (score >= 600) return '#22c55e';
   if (score >= 300) return '#eab308';
-  return '#f97316';
+  if (score >= 150) return '#f97316';
+  if (score > 0) return '#ef4444';
+  return '#666';
 }
 
-function createBadge(data, wallet) {
-  const color = getColor(data);
-  const score = Math.round(parseFloat(data?.score) || 0);
-  const display = score === 0 ? 'NEW' : score;
-
-  const badge = document.createElement('span');
-  badge.className = 'devcred-badge';
-  badge.innerHTML = `<span class="devcred-light" style="background:${color};box-shadow:0 0 4px ${color}"></span><span class="devcred-score">${display}</span>`;
-  badge.title = `DevCred: ${score}/740\nClick for profile`;
-  badge.style.cssText = 'cursor:pointer;margin-left:6px;vertical-align:middle;display:inline-flex;align-items:center;';
-  badge.onclick = (e) => {
-    e.stopPropagation();
-    e.preventDefault();
-    window.open(`https://devcred.fun/profile/${wallet}`, '_blank');
-  };
-  return badge;
-}
-
-// Scrape all data from Axiom's page including dev address, funding info, and token stats
+// Scrape funding info and token stats from Axiom page
 function scrapeAxiomData(devWallet) {
   const data = {
     devAddress: devWallet,
@@ -55,24 +184,17 @@ function scrapeAxiomData(devWallet) {
     fundingWallet: null,
     fundingWalletShort: null,
     fundingAmount: null,
-    timeAgo: null,
-    migrated: null,
-    nonMigrated: null,
-    topMcap: null
+    // Token stats scraped from Axiom's "Token Stats" section
+    axiomMigrated: null,
+    axiomNonMigrated: null,
+    axiomTotalTokens: null
   };
 
-  // Find all links and text on page
-  const allText = document.body.innerText;
-
-  // Find funding wallet - look for wallet addresses that appear after funding-related text
-  // Axiom shows "Funded via" section with wallet and SOL amount
   const allLinks = document.querySelectorAll('a');
   for (const link of allLinks) {
     const href = link.href || '';
-    // Look for solscan wallet links near funding text
     const walletMatch = href.match(/solscan\.io\/account\/([A-HJ-NP-Za-km-z1-9]{32,44})/);
     if (walletMatch && walletMatch[1] !== devWallet) {
-      // Check if parent/grandparent contains funding text
       let el = link;
       for (let i = 0; i < 4; i++) {
         el = el?.parentElement;
@@ -81,7 +203,6 @@ function scrapeAxiomData(devWallet) {
         if (text.includes('funded') || text.includes('funder')) {
           data.fundingWallet = walletMatch[1];
           data.fundingWalletShort = `${walletMatch[1].slice(0, 4)}...${walletMatch[1].slice(-4)}`;
-          console.log('[DevCred] Found funding wallet:', data.fundingWalletShort);
           break;
         }
       }
@@ -89,470 +210,381 @@ function scrapeAxiomData(devWallet) {
     }
   }
 
-  // Find SOL amount - look for patterns like "0.123 SOL" near the DA section
+  const allText = document.body.innerText;
   const solAmountMatch = allText.match(/(\d+\.?\d*)\s*SOL/);
   if (solAmountMatch) {
     data.fundingAmount = parseFloat(solAmountMatch[1]).toFixed(3) + ' SOL';
-    console.log('[DevCred] Found funding amount:', data.fundingAmount);
   }
 
-  // Find time ago
-  const timeMatch = allText.match(/(\d+[smhd])\s*ago/i);
-  if (timeMatch) {
-    data.timeAgo = timeMatch[1] + ' ago';
+  // Scrape token stats from Axiom's Token Stats section
+  // Look for "Migrated: X" and "Non-migrated: Y" patterns
+  const migratedMatch = allText.match(/Migrated:\s*(\d+)/i);
+  const nonMigratedMatch = allText.match(/Non-migrated:\s*(\d+)/i);
+
+  if (migratedMatch) {
+    data.axiomMigrated = parseInt(migratedMatch[1], 10);
+  }
+  if (nonMigratedMatch) {
+    data.axiomNonMigrated = parseInt(nonMigratedMatch[1], 10);
+  }
+  if (data.axiomMigrated !== null && data.axiomNonMigrated !== null) {
+    data.axiomTotalTokens = data.axiomMigrated + data.axiomNonMigrated;
   }
 
-  // Scrape token stats - Method 1: Look for specific elements
-  const allSpans = document.querySelectorAll('span');
-  for (const span of allSpans) {
-    const text = span.textContent?.trim() || '';
-
-    if (text === 'Migrated:') {
-      const parent = span.parentElement;
-      if (parent) {
-        const valueSpan = parent.querySelector('span:last-child');
-        if (valueSpan && valueSpan !== span) {
-          const val = parseInt(valueSpan.textContent?.trim(), 10);
-          if (!isNaN(val)) {
-            data.migrated = val;
-            console.log('[DevCred] Found Migrated:', val);
-          }
-        }
-      }
-    }
-
-    if (text === 'Non-migrated:') {
-      const parent = span.parentElement;
-      if (parent) {
-        const valueSpan = parent.querySelector('span:last-child');
-        if (valueSpan && valueSpan !== span) {
-          const val = parseInt(valueSpan.textContent?.trim(), 10);
-          if (!isNaN(val)) {
-            data.nonMigrated = val;
-            console.log('[DevCred] Found Non-migrated:', val);
-          }
-        }
-      }
-    }
-  }
-
-  // Method 2: Fallback to regex
-  if (data.migrated === null || data.nonMigrated === null) {
-    const migratedMatch = allText.match(/Migrated:\s*(\d+)/);
-    const nonMigratedMatch = allText.match(/Non-migrated:\s*(\d+)/);
-
-    if (migratedMatch && data.migrated === null) {
-      data.migrated = parseInt(migratedMatch[1], 10);
-    }
-    if (nonMigratedMatch && data.nonMigrated === null) {
-      data.nonMigrated = parseInt(nonMigratedMatch[1], 10);
-    }
-  }
-
-  // Method 3: Look for Token Stats container
-  if (data.migrated === null || data.nonMigrated === null) {
-    const tokenStatsHeader = Array.from(document.querySelectorAll('h4')).find(h =>
-      h.textContent?.includes('Token Stats')
-    );
-    if (tokenStatsHeader) {
-      const container = tokenStatsHeader.parentElement;
-      if (container) {
-        const text = container.innerText;
-        const migratedMatch = text.match(/Migrated:\s*(\d+)/);
-        const nonMigratedMatch = text.match(/Non-migrated:\s*(\d+)/);
-        if (migratedMatch) data.migrated = parseInt(migratedMatch[1], 10);
-        if (nonMigratedMatch) data.nonMigrated = parseInt(nonMigratedMatch[1], 10);
-      }
-    }
-  }
-
-  // Find Top MCAP
-  const mcapMatch = allText.match(/Top MCAP:.*?\(\s*\$([0-9,.]+[KMB]?)\s*\)/i) ||
-                    allText.match(/Top MCAP:.*?\$([0-9,.]+[KMB]?)/i);
-  if (mcapMatch) {
-    let mcap = mcapMatch[1].replace(/,/g, '');
-    if (mcap.endsWith('K')) mcap = parseFloat(mcap) * 1000;
-    else if (mcap.endsWith('M')) mcap = parseFloat(mcap) * 1000000;
-    else if (mcap.endsWith('B')) mcap = parseFloat(mcap) * 1000000000;
-    else mcap = parseFloat(mcap);
-    data.topMcap = mcap;
-  }
-
-  console.log('[DevCred] Scraped Axiom data:', data);
+  console.log('[DevKarma] Scraped Axiom data:', data);
   return data;
 }
 
-// Legacy wrapper for backwards compatibility
-function scrapeAxiomStats() {
-  const data = scrapeAxiomData(null);
-  return { migrated: data.migrated, nonMigrated: data.nonMigrated, topMcap: data.topMcap };
-}
+// ============ MINI BADGE (theme-aware) ============
+function createMiniBadge(data, wallet, axiomData = null) {
+  const theme = getThemeColors();
+  const score = Math.round(parseFloat(data?.score) || 0);
+  const color = getColor(score);
 
-// Send scraped data to our API to update the database
-async function updateBackendWithScrapedData(wallet, axiomStats) {
-  if (!axiomStats || axiomStats.migrated === null) return;
+  // Use Axiom's scraped data as fallback if API returns 0 tokens
+  const apiMigrations = data?.migrationCount || 0;
+  const apiTokens = data?.tokenCount || 0;
+  const migrationCount = (apiMigrations === 0 && axiomData?.axiomMigrated !== null)
+    ? axiomData.axiomMigrated
+    : apiMigrations;
 
-  try {
-    const payload = {
-      wallet,
-      tokenCount: (axiomStats.migrated || 0) + (axiomStats.nonMigrated || 0),
-      migrationCount: axiomStats.migrated || 0,
-      topMcap: axiomStats.topMcap || 0,
-      source: 'axiom_scrape'
-    };
+  const rugCount = data?.rugCount || 0;
+  const hasRugs = rugCount > 0;
+  const twitterHandle = data?.twitterHandle || null;
+  const displayScore = score === 0 ? '—' : score;
 
-    console.log('[DevCred] Updating backend with scraped data:', payload);
+  const badge = document.createElement('div');
+  badge.className = 'devkarma-badge';
+  badge.title = `Click for full DevKarma profile`;
+  badge.style.cssText = `
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    padding: 6px 12px;
+    background: ${theme.badgeBg};
+    border: 1px solid ${theme.badgeBorder};
+    border-radius: 6px;
+    font-family: -apple-system, sans-serif;
+    font-size: 11px;
+    color: ${theme.textSecondary};
+    cursor: pointer;
+    margin-right: 8px;
+    flex-shrink: 0;
+    transition: all 0.15s ease;
+  `;
 
-    const res = await fetch(`${API_BASE}/api/reputation/${wallet}/update`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
+  badge.innerHTML = `
+    <div style="display:flex;align-items:center;gap:6px;">
+      <span style="color:${theme.textMuted};font-size:10px;text-transform:uppercase;">Score</span>
+      <span style="color:${color};font-weight:700;font-size:13px;font-variant-numeric:tabular-nums;">${displayScore}</span>
+    </div>
+    <div style="width:1px;height:16px;background:${theme.divider};"></div>
+    <div style="display:flex;align-items:center;gap:6px;">
+      <span style="color:${theme.textMuted};font-size:10px;text-transform:uppercase;">Migrations</span>
+      <span style="color:#22c55e;font-weight:600;">${migrationCount}</span>
+    </div>
+    ${hasRugs ? `
+    <div style="width:1px;height:16px;background:${theme.divider};"></div>
+    <div style="display:flex;align-items:center;gap:4px;">
+      <span style="color:#ef4444;font-weight:600;">${rugCount} RUG${rugCount > 1 ? 'S' : ''}</span>
+    </div>
+    ` : ''}
+    ${twitterHandle ? `
+    <div style="width:1px;height:16px;background:${theme.divider};"></div>
+    <div style="display:flex;align-items:center;gap:4px;">
+      <span style="color:${theme.textSecondary};">@${twitterHandle}</span>
+    </div>
+    ` : ''}
+  `;
 
-    if (res.ok) {
-      console.log('[DevCred] Backend updated successfully');
-    } else {
-      console.log('[DevCred] Backend update failed:', res.status);
-    }
-  } catch (e) {
-    console.log('[DevCred] Backend update error:', e);
-  }
-}
-
-// Get tier color from tier name (matches backend getTierInfo)
-function getTierColor(tier) {
-  const colors = {
-    legend: '#FFD700',      // Gold
-    elite: '#9B59B6',       // Purple
-    rising_star: '#F59E0B', // Amber
-    proven: '#22c55e',      // Green
-    builder: '#3498DB',     // Blue
-    verified: '#eab308',    // Yellow
-    penalized: '#ef4444',   // Red
-    unverified: '#666',     // Gray
+  badge.onmouseenter = () => {
+    badge.style.background = theme.badgeHoverBg;
+    badge.style.borderColor = theme.badgeHoverBorder;
   };
-  return colors[tier?.toLowerCase()] || '#666';
+  badge.onmouseleave = () => {
+    badge.style.background = theme.badgeBg;
+    badge.style.borderColor = theme.badgeBorder;
+  };
+  badge.onclick = (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    window.open(`${SITE_BASE}/profile/${wallet}`, '_blank');
+  };
+
+  return badge;
 }
 
-// TOKEN PAGE: Insert DevCred card ABOVE DA section (replacing it visually)
-function scanTokenPage() {
-  if (document.querySelector('.devcred-card')) {
-    console.log('[DevCred] Card already exists');
-    return;
-  }
-
-  // Find x.com/search links which contain the dev address
-  const twitterLinks = document.querySelectorAll('a[href*="x.com/search"]');
-  console.log('[DevCred] Twitter links found:', twitterLinks.length);
-
-  for (const link of twitterLinks) {
-    const href = link.href;
-    const match = href.match(/[?&]q=([A-HJ-NP-Za-km-z1-9]{32,44})/);
-    if (!match) continue;
-
-    const wallet = match[1];
-    console.log('[DevCred] Found wallet:', wallet);
-
-    // Check if this link is in a DA row
-    let parent = link.parentElement;
-    for (let i = 0; i < 6; i++) {
-      if (!parent) break;
-
-      const text = parent.textContent || '';
-      if (text.includes('DA:')) {
-        console.log('[DevCred] Found DA row');
-
-        // Find the container/section that holds the DA info
-        let section = parent;
-        for (let j = 0; j < 5; j++) {
-          section = section.parentElement;
-          if (!section) break;
-          const rect = section.getBoundingClientRect();
-          if (rect.height > 50 && rect.height < 300) {
-            break;
-          }
-        }
-
-        if (section) {
-          // Hide the original DA section
-          section.style.display = 'none';
-
-          // Create loading card and insert BEFORE the hidden DA section
-          const card = createDevCredCard(null, wallet, true, null);
-          section.insertAdjacentElement('beforebegin', card);
-
-          // Wait for Axiom's page to fully render token stats
-          setTimeout(async () => {
-            // Scrape all Axiom data including funding info
-            const axiomData = scrapeAxiomData(wallet);
-
-            // Fetch our API data for score and rug count
-            const apiData = await fetchDevScore(wallet);
-
-            // Check if we got Axiom stats
-            const hasAxiomStats = axiomData.migrated !== null && axiomData.nonMigrated !== null;
-
-            // Merge data
-            const mergedData = {
-              ...apiData,
-              // Axiom page data
-              devAddress: axiomData.devAddress,
-              devAddressShort: axiomData.devAddressShort,
-              fundingWallet: axiomData.fundingWallet,
-              fundingWalletShort: axiomData.fundingWalletShort,
-              fundingAmount: axiomData.fundingAmount,
-              timeAgo: axiomData.timeAgo,
-              // Stats
-              tokenCount: hasAxiomStats
-                ? (axiomData.migrated + axiomData.nonMigrated)
-                : (apiData?.tokenCount || 0),
-              migrationCount: hasAxiomStats
-                ? axiomData.migrated
-                : (apiData?.migrationCount || 0),
-              topMcap: axiomData.topMcap || null,
-              rugCount: apiData?.rugCount || 0,
-              // Score from API
-              score: parseFloat(apiData?.score) || 0,
-              tierName: apiData?.tierName || 'Unknown',
-              tierColor: getTierColor(apiData?.tier || 'unknown'),
-            };
-
-            // Sync to backend if we have fresh Axiom data
-            if (hasAxiomStats) {
-              updateBackendWithScrapedData(wallet, axiomData);
-            }
-
-            const realCard = createDevCredCard(mergedData, wallet, false, axiomData);
-            card.replaceWith(realCard);
-            console.log('[DevCred] Card injected!', mergedData);
-          }, 1000);
-
-          return;
-        }
-      }
-      parent = parent.parentElement;
-    }
-  }
-
-  console.log('[DevCred] Could not find DA section');
-}
-
-// Copy text to clipboard and show feedback
-function copyToClipboard(text, button) {
-  navigator.clipboard.writeText(text).then(() => {
-    const originalText = button.textContent;
-    button.textContent = 'Copied!';
-    button.classList.add('copied');
-    setTimeout(() => {
-      button.textContent = originalText;
-      button.classList.remove('copied');
-    }, 1500);
-  });
-}
-
-// Create the DevCred info card (replaces Axiom's DA section)
-function createDevCredCard(data, wallet, isLoading, axiomData) {
+// ============ FULL CARD (theme-aware) ============
+function createFullCard(data, wallet, axiomData, isLoading = false) {
+  const theme = getThemeColors();
   const card = document.createElement('div');
-  card.className = 'devcred-card';
+  card.className = 'devkarma-card';
+
+  const logoUrl = chrome.runtime.getURL('icons/icon32.png');
 
   if (isLoading) {
+    card.style.cssText = `
+      background: ${theme.cardBg};
+      border: 1px solid ${theme.cardBorder};
+      border-radius: 8px;
+      padding: 14px 16px;
+      font-family: -apple-system, sans-serif;
+    `;
     card.innerHTML = `
-      <div class="devcred-card-header">
-        <span class="devcred-card-logo">DevCred</span>
-        <span class="devcred-card-subtitle">Developer Reputation</span>
-      </div>
-      <div class="devcred-card-body devcred-card-loading">
-        <span class="devcred-spinner"></span>
-        <span>Analyzing developer...</span>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <img src="${logoUrl}" style="width:24px;height:24px;border-radius:4px;" />
+        <span style="color:${theme.textPrimary};font-weight:600;font-size:14px;">DevKarma</span>
+        <span style="color:${theme.textMuted};font-size:12px;">Loading...</span>
       </div>
     `;
     return card;
   }
 
-  const color = data?.tierColor || getColor(data);
   const score = Math.round(parseFloat(data?.score) || 0);
-  const tierName = data?.tierName || 'Unknown';
-  const tokenCount = data?.tokenCount || 0;
-  const migrationCount = data?.migrationCount || 0;
+  const tier = data?.tier || getTier(score);
+  const tierName = getTierName(tier);
+  const color = getColor(score);
+
+  // Use Axiom's scraped data as fallback if API returns 0 tokens
+  const apiTokens = data?.tokenCount || 0;
+  const apiMigrations = data?.migrationCount || 0;
+  const tokenCount = (apiTokens === 0 && axiomData?.axiomTotalTokens !== null)
+    ? axiomData.axiomTotalTokens
+    : apiTokens;
+  const migrationCount = (apiMigrations === 0 && axiomData?.axiomMigrated !== null)
+    ? axiomData.axiomMigrated
+    : apiMigrations;
+
   const rugCount = data?.rugCount || 0;
-  const topMcap = data?.topMcap;
+  const hasRugs = rugCount > 0;
+  const migrationRate = tokenCount > 0 ? Math.round((migrationCount / tokenCount) * 100) : 0;
+  const twitterHandle = data?.twitterHandle || null;
+  const isBased = score >= 600;
 
-  // Wallet info
-  const devAddress = data?.devAddress || wallet;
-  const devAddressShort = data?.devAddressShort || `${wallet.slice(0, 4)}...${wallet.slice(-4)}`;
-  const fundingWallet = data?.fundingWallet;
-  const fundingWalletShort = data?.fundingWalletShort;
-  const fundingAmount = data?.fundingAmount;
+  const devAddress = axiomData?.devAddress || wallet;
+  const devAddressShort = axiomData?.devAddressShort || `${wallet.slice(0, 4)}...${wallet.slice(-4)}`;
+  const fundingWallet = axiomData?.fundingWallet;
+  const fundingWalletShort = axiomData?.fundingWalletShort;
+  const fundingAmount = axiomData?.fundingAmount;
 
-  // Calculate migration rate
-  const migrationRate = tokenCount > 0 ? ((migrationCount / tokenCount) * 100).toFixed(1) : 0;
-
-  // Determine status message
-  let statusMsg = '';
-  let statusClass = '';
-  if (rugCount > 0) {
-    statusMsg = `⚠️ ${rugCount} rug${rugCount > 1 ? 's' : ''} detected`;
-    statusClass = 'danger';
-  } else if (migrationCount >= 5) {
-    statusMsg = '🏆 Proven track record';
-    statusClass = 'success';
+  let status = '';
+  let statusColor = theme.textMuted;
+  if (hasRugs) {
+    status = `⚠️ ${rugCount} rug${rugCount > 1 ? 's' : ''} detected`;
+    statusColor = '#ef4444';
   } else if (migrationCount >= 3) {
-    statusMsg = '✓ Multiple successful launches';
-    statusClass = 'success';
+    status = '✓ Proven track record';
+    statusColor = '#22c55e';
   } else if (migrationCount >= 1) {
-    statusMsg = '✓ Has migrated token(s)';
-    statusClass = 'good';
-  } else if (tokenCount > 50) {
-    statusMsg = 'Experienced launcher';
-    statusClass = 'neutral';
+    status = '✓ Has migrated token';
+    statusColor = '#22c55e';
   } else if (tokenCount > 0) {
-    statusMsg = 'Building history';
-    statusClass = 'neutral';
+    status = 'Building history';
   } else {
-    statusMsg = 'New developer';
-    statusClass = 'neutral';
+    status = 'New developer';
   }
 
-  // Format top mcap
-  let topMcapDisplay = '';
-  if (topMcap) {
-    if (topMcap >= 1000000) topMcapDisplay = `$${(topMcap / 1000000).toFixed(1)}M`;
-    else if (topMcap >= 1000) topMcapDisplay = `$${(topMcap / 1000).toFixed(0)}K`;
-    else topMcapDisplay = `$${topMcap.toFixed(0)}`;
-  }
+  // Based dev gets special green tint
+  const basedBg = getAxiomTheme() === 'light'
+    ? 'linear-gradient(135deg, rgba(34,197,94,0.08) 0%, rgba(34,197,94,0.04) 100%)'
+    : 'linear-gradient(135deg, rgba(34,197,94,0.08) 0%, rgba(46,74,59,0.12) 100%)';
+  const basedBorder = 'rgba(34,197,94,0.2)';
 
-  // Check if we have Axiom data
-  const hasAxiomData = axiomData && (axiomData.migrated !== null || axiomData.nonMigrated !== null);
+  card.style.cssText = `
+    background: ${isBased ? basedBg : theme.cardBg};
+    border: 1px solid ${isBased ? basedBorder : theme.cardBorder};
+    border-radius: 8px;
+    padding: 14px 16px;
+    font-family: -apple-system, sans-serif;
+  `;
 
   card.innerHTML = `
-    <div class="devcred-card-header">
-      <span class="devcred-card-logo">DevCred</span>
-      <span class="devcred-card-subtitle">Developer Reputation</span>
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid ${theme.divider};">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <img src="${logoUrl}" style="width:20px;height:20px;border-radius:3px;" />
+        <span style="color:${theme.textPrimary};font-weight:600;font-size:13px;">DevKarma</span>
+        ${isBased ? '<span style="color:#22c55e;font-size:11px;">⚡ BASED DEV</span>' : ''}
+      </div>
+      ${!isBased ? `<span style="color:${theme.textMuted};font-size:10px;">Developer Reputation</span>` : ''}
     </div>
-    <div class="devcred-card-body">
-      <!-- Wallet Info Section (like Axiom's DA section) -->
-      <div class="devcred-wallet-section">
-        <div class="devcred-wallet-row">
-          <span class="devcred-wallet-label">DA:</span>
-          <span class="devcred-wallet-address" title="${devAddress}">${devAddressShort}</span>
-          <button class="devcred-copy-btn" data-wallet="${devAddress}">Copy</button>
-        </div>
-        ${fundingWallet ? `
-        <div class="devcred-wallet-row">
-          <span class="devcred-wallet-label">Funded via:</span>
-          <span class="devcred-wallet-address" title="${fundingWallet}">${fundingWalletShort}</span>
-          ${fundingAmount ? `<span class="devcred-funding-amount">${fundingAmount}</span>` : ''}
-          <button class="devcred-copy-btn" data-wallet="${fundingWallet}">Copy</button>
-        </div>
-        ` : ''}
-      </div>
 
-      <!-- Score Section -->
-      <div class="devcred-card-score-section">
-        <div class="devcred-card-score-circle" style="border-color: ${color}">
-          <span class="devcred-card-score-value" style="color: ${color}">${score === 0 ? '—' : score}</span>
-          <span class="devcred-card-score-max">/740</span>
+    <!-- Wallet Info -->
+    <div style="margin-bottom:12px;padding:10px;background:${theme.sectionBg};border-radius:6px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:${fundingWallet ? '8px' : '0'};">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="color:${theme.textMuted};font-size:11px;min-width:24px;">DA:</span>
+          <span style="color:${theme.textSecondary};font-size:12px;font-family:monospace;">${devAddressShort}</span>
         </div>
-        <div class="devcred-card-tier-info">
-          <div class="devcred-card-tier">
-            <span class="devcred-card-tier-dot" style="background: ${color}; box-shadow: 0 0 8px ${color}"></span>
-            <span class="devcred-card-tier-name">${tierName}</span>
-          </div>
-          ${topMcapDisplay ? `<div class="devcred-card-mcap">Best: ${topMcapDisplay}</div>` : ''}
-        </div>
+        <button class="copy-btn" data-wallet="${devAddress}" style="padding:3px 8px;background:${theme.btnBg};border:1px solid ${theme.btnBorder};border-radius:4px;color:${theme.btnText};font-size:10px;cursor:pointer;">Copy</button>
       </div>
-
-      <!-- Stats Row -->
-      <div class="devcred-card-stats">
-        <div class="devcred-card-stat">
-          <span class="devcred-card-stat-value">${tokenCount}</span>
-          <span class="devcred-card-stat-label">Tokens</span>
+      ${fundingWallet ? `
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="color:${theme.textMuted};font-size:11px;min-width:24px;">Via:</span>
+          <span style="color:${theme.textSecondary};font-size:12px;font-family:monospace;">${fundingWalletShort}</span>
+          ${fundingAmount ? `<span style="color:${theme.textMuted};font-size:11px;">${fundingAmount}</span>` : ''}
         </div>
-        <div class="devcred-card-stat devcred-stat-good">
-          <span class="devcred-card-stat-value">${migrationCount}</span>
-          <span class="devcred-card-stat-label">Migrated</span>
-        </div>
-        <div class="devcred-card-stat">
-          <span class="devcred-card-stat-value">${migrationRate}%</span>
-          <span class="devcred-card-stat-label">Rate</span>
-        </div>
-        <div class="devcred-card-stat ${rugCount > 0 ? 'devcred-stat-danger' : ''}">
-          <span class="devcred-card-stat-value">${rugCount}</span>
-          <span class="devcred-card-stat-label">Rugs</span>
-        </div>
+        <button class="copy-btn" data-wallet="${fundingWallet}" style="padding:3px 8px;background:${theme.btnBg};border:1px solid ${theme.btnBorder};border-radius:4px;color:${theme.btnText};font-size:10px;cursor:pointer;">Copy</button>
       </div>
-
-      <!-- Status Message -->
-      <div class="devcred-card-status devcred-status-${statusClass}">${statusMsg}</div>
+      ` : ''}
     </div>
-    <div class="devcred-card-footer">
-      <span class="devcred-profile-link">View full profile →</span>
-      ${hasAxiomData ? '<span class="devcred-card-source">✓ Live data</span>' : ''}
+
+    <!-- Score + Stats -->
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:12px;">
+      <!-- Score -->
+      <div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0;">
+        <span style="font-size:28px;font-weight:700;color:${color};line-height:1;font-variant-numeric:tabular-nums;">${score || '—'}</span>
+        <span style="font-size:9px;color:${theme.textMuted};text-transform:uppercase;letter-spacing:0.5px;">score</span>
+      </div>
+
+      <div style="width:1px;height:36px;background:${theme.divider};"></div>
+
+      <!-- Stats -->
+      <div style="flex:1;">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+          ${twitterHandle
+            ? `<a href="https://x.com/${twitterHandle}" target="_blank" style="font-size:11px;padding:2px 8px;background:${color};color:white;font-weight:600;border-radius:3px;text-decoration:none;transition:opacity 0.15s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">@${twitterHandle}</a>`
+            : `<span style="font-size:11px;padding:2px 8px;background:${theme.textMuted};color:white;font-weight:600;border-radius:3px;">Unclaimed</span>`
+          }
+        </div>
+        <div style="display:flex;gap:14px;font-size:11px;color:${theme.textSecondary};">
+          <span><strong style="color:${theme.textPrimary};">${tokenCount}</strong> tokens</span>
+          <span><strong style="color:#22c55e;">${migrationCount}</strong> migrated</span>
+          <span><strong style="color:${theme.textPrimary};">${migrationRate}%</strong> rate</span>
+          ${hasRugs ? `<span><strong style="color:#ef4444;">${rugCount}</strong> rugs</span>` : ''}
+        </div>
+      </div>
+    </div>
+
+    <!-- Status + Link -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding-top:10px;border-top:1px solid ${theme.divider};">
+      <span style="font-size:11px;color:${statusColor};">${status}</span>
+      <span class="profile-link" style="color:${theme.textSecondary};font-size:11px;cursor:pointer;transition:color 0.15s;">View full profile →</span>
     </div>
   `;
 
-  // Add click handlers for copy buttons (stop propagation so card doesn't open profile)
-  card.querySelectorAll('.devcred-copy-btn').forEach(btn => {
+  // Event handlers
+  card.querySelectorAll('.copy-btn').forEach(btn => {
     btn.onclick = (e) => {
       e.stopPropagation();
-      e.preventDefault();
-      copyToClipboard(btn.dataset.wallet, btn);
+      navigator.clipboard.writeText(btn.dataset.wallet);
+      btn.textContent = 'Copied!';
+      setTimeout(() => btn.textContent = 'Copy', 1500);
     };
   });
 
-  // Card click opens profile
-  card.querySelector('.devcred-profile-link').onclick = (e) => {
+  const profileLink = card.querySelector('.profile-link');
+  profileLink.onclick = (e) => {
     e.stopPropagation();
-    window.open(`https://devcred.fun/profile/${wallet}`, '_blank');
+    window.open(`${SITE_BASE}/profile/${wallet}`, '_blank');
   };
+  profileLink.onmouseenter = (e) => e.target.style.color = '#22c55e';
+  profileLink.onmouseleave = (e) => e.target.style.color = theme.textSecondary;
 
   return card;
 }
 
-// PULSE PAGE: Disabled - Pulse page only shows token addresses, not creator wallets
-// The x.com/search links contain token mint addresses (e.g. "rSa3...pump")
-// not the actual developer wallet, so we can't look up their score.
-// Badges only work on token detail pages where we can find the DA section.
-function scanPulsePage() {
-  // Disabled for now - would need Helius API call to resolve token→creator
-  // which is expensive and slow for the Pulse page with many cards
-  return;
-}
+// ============ INJECTION LOGIC ============
+async function injectElements() {
+  if (!settings.enabled) return;
 
-function findTokenNameInCard(card) {
-  const candidates = card.querySelectorAll('span, div, a');
+  const twitterLinks = document.querySelectorAll('a[href*="x.com/search"]');
+  let wallet = null;
+  let daSection = null;
 
-  for (const el of candidates) {
-    if (el.querySelector('.devcred-badge')) continue;
+  for (const link of twitterLinks) {
+    const match = link.href.match(/[?&]q=([A-HJ-NP-Za-km-z1-9]{32,44})/);
+    if (!match) continue;
+    wallet = match[1];
 
-    const text = el.textContent?.trim() || '';
-    if (!text || text.length < 2 || text.length > 40) continue;
-    if (/^[\d\.\$%,]+$/.test(text)) continue;
-    if (/^[A-Za-z0-9]+\.{2,3}[A-Za-z0-9]+$/.test(text)) continue;
-    if (text.includes('@')) continue;
-    if (/^\d+[smhd]$/.test(text)) continue;
-    if (text.includes('MC') || text.includes('TX') || text.includes('SOL')) continue;
+    let parent = link.parentElement;
+    for (let i = 0; i < 8; i++) {
+      if (!parent) break;
+      if ((parent.textContent || '').includes('DA:')) {
+        daSection = parent;
+        break;
+      }
+      parent = parent.parentElement;
+    }
+    if (daSection) break;
+  }
 
-    const style = window.getComputedStyle(el);
-    const fontSize = parseFloat(style.fontSize);
-    const fontWeight = parseInt(style.fontWeight);
+  if (!wallet) {
+    console.log('[DevKarma] No wallet found');
+    return;
+  }
 
-    if (fontSize >= 13 && fontWeight >= 500 && /^[A-Z]/.test(text)) {
-      return el;
+  if (injectedWallets.has(wallet)) return;
+
+  console.log('[DevKarma] Found wallet:', wallet);
+  injectedWallets.add(wallet);
+
+  // Scrape Axiom data
+  const axiomData = scrapeAxiomData(wallet);
+
+  // Fetch API data
+  const data = await fetchDevScore(wallet);
+  console.log('[DevKarma] Got data:', data);
+
+  // Update stats
+  const stats = await chrome.storage.local.get(['stats']) || {};
+  const currentStats = stats.stats || { scanned: 0, flagged: 0 };
+  currentStats.scanned++;
+  if ((data?.rugCount || 0) > 0) currentStats.flagged++;
+  chrome.storage.local.set({ stats: currentStats });
+
+  // INJECT MINI BADGE on RIGHT side of header
+  if (settings.showBadge) {
+    const headerBar = document.querySelector('.flex.max-h-\\[64px\\].min-h-\\[64px\\]');
+    if (headerBar && !headerBar.querySelector('.devkarma-badge')) {
+      const badge = createMiniBadge(data, wallet, axiomData);
+      const rightContainer = headerBar.querySelector('.flex.flex-1.flex-row.items-center.justify-end');
+      if (rightContainer) {
+        rightContainer.parentElement.insertBefore(badge, rightContainer);
+      } else {
+        headerBar.appendChild(badge);
+      }
+      console.log('[DevKarma] Mini badge injected on right');
     }
   }
-  return null;
+
+  // INJECT FULL CARD replacing DA section
+  if (settings.showCard && daSection) {
+    // Find the section container
+    let section = daSection;
+    for (let i = 0; i < 5; i++) {
+      section = section.parentElement;
+      if (!section) break;
+      const rect = section.getBoundingClientRect();
+      if (rect.height > 50 && rect.height < 300) break;
+    }
+
+    if (section && !document.querySelector('.devkarma-card')) {
+      // Hide original DA section
+      section.style.display = 'none';
+      section.setAttribute('data-devkarma-hidden', 'true');
+
+      // Insert card before hidden section
+      const card = createFullCard(data, wallet, axiomData);
+      section.insertAdjacentElement('beforebegin', card);
+      console.log('[DevKarma] Full card injected (replaced DA)');
+    }
+  }
 }
 
 function scan() {
-  console.log('[DevCred] Scanning...');
-  scanTokenPage();
-  scanPulsePage();
+  if (!settings.enabled) return;
+  console.log('[DevKarma] Scanning...');
+  injectElements().catch(e => console.error('[DevKarma] Error:', e));
 }
 
-console.log('[DevCred] Extension loaded');
+console.log('[DevKarma] Extension loaded');
 setTimeout(scan, 1500);
 setTimeout(scan, 3000);
 
-const observer = new MutationObserver(() => setTimeout(scan, 500));
+const observer = new MutationObserver(() => {
+  clearTimeout(window.devkarmaScanTimeout);
+  window.devkarmaScanTimeout = setTimeout(scan, 500);
+});
 observer.observe(document.body, { childList: true, subtree: true });

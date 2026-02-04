@@ -1,15 +1,27 @@
 {
   "manifest_version": 3,
-  "name": "DevCred - Dev Reputation",
+  "name": "DevKarma",
   "version": "1.0.0",
-  "description": "Shows developer reputation scores on Axiom and other Solana trading interfaces",
+  "description": "Developer reputation scores for Solana token creators",
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
   "permissions": ["storage", "activeTab"],
   "host_permissions": [
     "https://axiom.trade/*",
     "https://*.axiom.trade/*",
     "https://pump.fun/*",
-    "https://devcred.fun/*",
+    "https://devkarma.fun/*",
     "https://devkarmaagent-production.up.railway.app/*"
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["icons/*"],
+      "matches": ["https://axiom.trade/*", "https://*.axiom.trade/*"]
+    }
   ],
   "content_scripts": [
     {
@@ -21,6 +33,11 @@
   ],
   "action": {
     "default_popup": "popup.html",
-    "default_title": "DevCred"
+    "default_title": "DevKarma",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png"
+    }
   }
 }
