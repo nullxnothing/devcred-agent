@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>DevCred Badge Preview</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #0a0a12;
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      padding: 40px;
+      min-height: 100vh;
+    }
+
+    h1 {
+      font-size: 24px;
+      margin-bottom: 8px;
+      color: rgba(255,255,255,0.9);
+    }
+
+    .subtitle {
+      color: rgba(255,255,255,0.4);
+      margin-bottom: 40px;
+      font-size: 14px;
+    }
+
+    h2 {
+      font-size: 14px;
+      color: rgba(255,255,255,0.5);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin: 32px 0 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+
+    /* Fake Axiom card */
+    .axiom-card {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      max-width: 500px;
+    }
+
+    .token-img {
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #1a1a2e, #2a2a4e);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+
+    .token-info {
+      flex: 1;
+    }
+
+    .token-name {
+      font-weight: 600;
+      font-size: 13px;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .token-meta {
+      font-size: 11px;
+      color: rgba(255,255,255,0.4);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .token-meta .age {
+      color: #22c55e;
+    }
+
+    .token-price {
+      text-align: right;
+    }
+
+    .price {
+      font-weight: 700;
+      font-size: 14px;
+      color: #22c55e;
+    }
+
+    .mc {
+      font-size: 11px;
+      color: rgba(255,255,255,0.4);
+    }
+
+    /* Detail panel mock */
+    .detail-panel {
+      background: rgba(255,255,255,0.02);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 8px;
+      padding: 16px;
+      max-width: 300px;
+    }
+
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      font-size: 12px;
+    }
+
+    .detail-row:last-child {
+      border-bottom: none;
+    }
+
+    .detail-label {
+      color: rgba(255,255,255,0.5);
+    }
+
+    .detail-value {
+      color: rgba(255,255,255,0.9);
+      font-weight: 500;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 40px;
+      margin-top: 20px;
+    }
+
+    .badge-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 12px;
+    }
+
+    .badge-label {
+      width: 100px;
+      font-size: 12px;
+      color: rgba(255,255,255,0.5);
+    }
+  </style>
+</head>
+<body>
+  <h1>DevCred Badge Preview</h1>
+  <p class="subtitle">How badges will appear on Axiom</p>
+
+  <div class="grid">
+    <div>
+      <h2>Inline Badges (Token Cards)</h2>
+
+      <div class="badge-row">
+        <span class="badge-label">Elite (600+)</span>
+        <span class="devcred-badge" data-tier="elite">
+          <span class="devcred-light" style="background:#22c55e;box-shadow:0 0 4px #22c55e"></span>
+          <span class="devcred-score">685</span>
+        </span>
+      </div>
+
+      <div class="badge-row">
+        <span class="badge-label">Proven (300-599)</span>
+        <span class="devcred-badge" data-tier="proven">
+          <span class="devcred-light" style="background:#eab308;box-shadow:0 0 4px #eab308"></span>
+          <span class="devcred-score">412</span>
+        </span>
+      </div>
+
+      <div class="badge-row">
+        <span class="badge-label">New (150-299)</span>
+        <span class="devcred-badge" data-tier="new">
+          <span class="devcred-light" style="background:#f97316;box-shadow:0 0 4px #f97316"></span>
+          <span class="devcred-score">198</span>
+        </span>
+      </div>
+
+      <div class="badge-row">
+        <span class="badge-label">Risky (&lt;150)</span>
+        <span class="devcred-badge" data-tier="penalized">
+          <span class="devcred-light" style="background:#ef4444;box-shadow:0 0 4px #ef4444"></span>
+          <span class="devcred-score">47</span>
+        </span>
+      </div>
+
+      <div class="badge-row">
+        <span class="badge-label">Unknown</span>
+        <span class="devcred-badge" data-tier="unknown">
+          <span class="devcred-light" style="background:#666;box-shadow:0 0 4px #666"></span>
+          <span class="devcred-score">?</span>
+        </span>
+      </div>
+
+      <div class="badge-row">
+        <span class="badge-label">Loading</span>
+        <span class="devcred-badge devcred-loading">
+          <span class="devcred-spinner"></span>
+        </span>
+      </div>
+
+      <h2>In Context (Fake Axiom Card)</h2>
+
+      <div class="axiom-card">
+        <div class="token-img">🚀</div>
+        <div class="token-info">
+          <div class="token-name">
+            MoonCoin
+            <span class="devcred-badge" data-tier="elite">
+              <span class="devcred-light" style="background:#22c55e;box-shadow:0 0 4px #22c55e"></span>
+              <span class="devcred-score">685</span>
+            </span>
+          </div>
+          <div class="token-meta">
+            <span class="age">12s</span>
+            <span>by @elitedev</span>
+            <span>3qUN...pump</span>
+          </div>
+        </div>
+        <div class="token-price">
+          <div class="price">$4.2K</div>
+          <div class="mc">MC $8K</div>
+        </div>
+      </div>
+
+      <div class="axiom-card">
+        <div class="token-img">💀</div>
+        <div class="token-info">
+          <div class="token-name">
+            SketchCoin
+            <span class="devcred-badge" data-tier="penalized">
+              <span class="devcred-light" style="background:#ef4444;box-shadow:0 0 4px #ef4444"></span>
+              <span class="devcred-score">23</span>
+            </span>
+          </div>
+          <div class="token-meta">
+            <span class="age">3s</span>
+            <span>by @rugger99</span>
+            <span>FJZh...bonk</span>
+          </div>
+        </div>
+        <div class="token-price">
+          <div class="price">$199</div>
+          <div class="mc">MC $3K</div>
+        </div>
+      </div>
+
+      <div class="axiom-card">
+        <div class="token-img">🌙</div>
+        <div class="token-info">
+          <div class="token-name">
+            NewToken
+            <span class="devcred-badge devcred-loading">
+              <span class="devcred-spinner"></span>
+            </span>
+          </div>
+          <div class="token-meta">
+            <span class="age">1s</span>
+            <span>by @newdev</span>
+            <span>9xKL...pump</span>
+          </div>
+        </div>
+        <div class="token-price">
+          <div class="price">$0</div>
+          <div class="mc">MC $3K</div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <h2>Detail Page Badge</h2>
+
+      <div class="detail-panel">
+        <div class="detail-row">
+          <span class="detail-label">Top 10 H.</span>
+          <span class="detail-value" style="color:#22c55e">17.08%</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Dev H.</span>
+          <span class="detail-value">0%</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Snipers H.</span>
+          <span class="detail-value">0.07%</span>
+        </div>
+
+        <!-- DevCred Badge -->
+        <div class="devcred-badge-detail" data-tier="elite">
+          <div class="devcred-detail-row">
+            <span class="devcred-light-lg" style="background:#22c55e;box-shadow:0 0 8px #22c55e"></span>
+            <span class="devcred-detail-label">DevCred</span>
+            <span class="devcred-detail-score">685<span class="devcred-max">/740</span></span>
+          </div>
+          <div class="devcred-detail-info">
+            <span class="devcred-tier">ELITE</span>
+            <span class="devcred-status" style="color:#22c55e">Trusted</span>
+          </div>
+        </div>
+
+        <div class="detail-row">
+          <span class="detail-label">Holders</span>
+          <span class="detail-value">534</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Pro Traders</span>
+          <span class="detail-value">353</span>
+        </div>
+      </div>
+
+      <h2 style="margin-top:40px">All Tier Variants</h2>
+
+      <div class="devcred-badge-detail" data-tier="elite" style="margin-bottom:8px">
+        <div class="devcred-detail-row">
+          <span class="devcred-light-lg" style="background:#22c55e;box-shadow:0 0 8px #22c55e"></span>
+          <span class="devcred-detail-label">DevCred</span>
+          <span class="devcred-detail-score">685<span class="devcred-max">/740</span></span>
+        </div>
+        <div class="devcred-detail-info">
+          <span class="devcred-tier">ELITE</span>
+          <span class="devcred-status" style="color:#22c55e">Trusted</span>
+        </div>
+      </div>
+
+      <div class="devcred-badge-detail" data-tier="proven" style="margin-bottom:8px">
+        <div class="devcred-detail-row">
+          <span class="devcred-light-lg" style="background:#eab308;box-shadow:0 0 8px #eab308"></span>
+          <span class="devcred-detail-label">DevCred</span>
+          <span class="devcred-detail-score">412<span class="devcred-max">/740</span></span>
+        </div>
+        <div class="devcred-detail-info">
+          <span class="devcred-tier">PROVEN</span>
+          <span class="devcred-status" style="color:#eab308">Caution</span>
+        </div>
+      </div>
+
+      <div class="devcred-badge-detail" data-tier="penalized" style="margin-bottom:8px">
+        <div class="devcred-detail-row">
+          <span class="devcred-light-lg" style="background:#ef4444;box-shadow:0 0 8px #ef4444"></span>
+          <span class="devcred-detail-label">DevCred</span>
+          <span class="devcred-detail-score">47<span class="devcred-max">/740</span></span>
+        </div>
+        <div class="devcred-detail-info">
+          <span class="devcred-tier">PENALIZED</span>
+          <span class="devcred-status" style="color:#ef4444">Risky</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

@@ -4,11 +4,12 @@
  * GET /api/reputation/:wallet
  *
  * Returns the pre-computed reputation score for a wallet.
- * If not in database, triggers a scan and returns the result.
+ * Supports multi-wallet identity linking: if the wallet is linked to a user,
+ * returns the unified score across all linked wallets.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getUserByWallet, getTokensByCreatorWallet } from '@/lib/db';
+import { getUserByAnyWallet, getTokensForUserWallets, getWalletsByUserId } from '@/lib/db';
 import { scanWalletQuick } from '@/lib/wallet-scan';
 import { isValidSolanaAddress } from '@/lib/validation/solana';
 
@@ -21,7 +22,14 @@ interface ReputationResponse {
   rugCount: number;
   migrationCount: number;
   lastScanned: string | null;
-  source: 'cached' | 'fresh';
+  source: 'cached' | 'scraped' | 'fresh';
+  userId?: string;
+  linkedWallets?: string[];
+  isLinkedWallet?: boolean;
+  // Twitter profile info (if connected)
+  twitterHandle?: string | null;
+  twitterName?: string | null;
+  avatarUrl?: string | null;
 }
 
 export async function GET(
@@ -30,7 +38,6 @@ export async function GET(
 ): Promise<NextResponse> {
   const { wallet } = await params;
 
-  // Validate wallet address
   if (!isValidSolanaAddress(wallet)) {
     return NextResponse.json(
       { error: 'Invalid Solana wallet address' },
@@ -39,28 +46,55 @@ export async function GET(
   }
 
   try {
-    // Check if we have pre-computed data
-    const user = await getUserByWallet(wallet);
+    // Two-hop lookup: check primary_wallet, then dk_wallets
+    const user = await getUserByAnyWallet(wallet);
 
-    if (user && user.total_score > 0) {
-      // Get token breakdown
-      const tokens = await getTokensByCreatorWallet(wallet);
-      const rugCount = tokens.filter(t => t.status === 'rug').length;
-      const migrationCount = tokens.filter(t => t.migrated).length;
+    if (user && (user.total_score ?? 0) > 0) {
+      // Parallel fetch: tokens and wallets
+      const [tokens, wallets] = await Promise.all([
+        getTokensForUserWallets(user.id),
+        getWalletsByUserId(user.id),
+      ]);
+
+      // Use scraped data from dk_users if dk_tokens is empty
+      // This happens when extension updates score but full scan hasn't run
+      const hasTokenData = tokens.length > 0;
+      const tokenCount = hasTokenData ? tokens.length : (user.token_count || 0);
+      const rugCount = hasTokenData ? tokens.filter(t => t.status === 'rug').length : (user.rug_count || 0);
+      const migrationCount = hasTokenData ? tokens.filter(t => t.migrated).length : (user.migration_count || 0);
+
+      const linkedWallets = wallets.map(w => w.address);
+      const isLinkedWallet = user.primary_wallet !== wallet;
+
+      // Only include Twitter info if it's a real Twitter account (has twitter_id)
+      // System-generated handles like "dev_XXXXXXXX" should not be returned
+      const hasRealTwitter = user.twitter_id && user.twitter_handle && !user.twitter_handle.startsWith('dev_');
 
       const response: ReputationResponse = {
         wallet,
         score: user.total_score,
         tier: user.tier || 'unverified',
         tierName: getTierName(user.tier || 'unverified'),
-        tokenCount: tokens.length,
+        tokenCount,
         rugCount,
         migrationCount,
         lastScanned: user.updated_at,
-        source: 'cached',
+        source: hasTokenData ? 'cached' : 'scraped',
+        userId: user.id,
+        linkedWallets: linkedWallets.length > 1 ? linkedWallets : undefined,
+        isLinkedWallet: isLinkedWallet || undefined,
+        // Only include Twitter info if user has linked a real Twitter account
+        twitterHandle: hasRealTwitter ? user.twitter_handle : undefined,
+        twitterName: hasRealTwitter ? user.twitter_name : undefined,
+        avatarUrl: hasRealTwitter ? user.avatar_url : undefined,
       };
 
-      return NextResponse.json(response);
+      // Cache for 5 minutes on CDN, allow stale for 10 min while revalidating
+      return NextResponse.json(response, {
+        headers: {
+          'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
+        },
+      });
     }
 
     // No cached data, perform fresh scan
@@ -92,6 +126,7 @@ function getTierName(tier: string): string {
   const names: Record<string, string> = {
     legend: 'Legend',
     elite: 'Elite',
+    rising_star: 'Rising Star',
     proven: 'Proven',
     builder: 'Builder',
     verified: 'Verified',

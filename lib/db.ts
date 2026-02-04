@@ -3,8 +3,10 @@ import { User, Wallet, Token, ScoreHistory, ProfileView, NewUser, NewWallet, New
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
+  // Railway PostgreSQL uses self-signed certs, so we must allow them
+  // This is acceptable for Railway's internal network but not ideal
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-  max: 20,
+  max: 30, // Increased for parallel query patterns
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 5000,
 });
@@ -97,6 +99,21 @@ export async function getUserByWallet(walletAddress: string): Promise<User | nul
 }
 
 /**
+ * Get user by any wallet address (primary or linked via dk_wallets)
+ * Single query with JOIN - replaces 3 sequential queries
+ */
+export async function getUserByAnyWallet(walletAddress: string): Promise<User | null> {
+  const result = await pool.query(
+    `SELECT u.* FROM dk_users u
+     LEFT JOIN dk_wallets w ON u.id = w.user_id
+     WHERE u.primary_wallet = $1 OR w.address = $1
+     LIMIT 1`,
+    [walletAddress]
+  );
+  return result.rows[0] || null;
+}
+
+/**
  * Get user by their pump.fun username
  */
 export async function getUserByPumpFunUsername(username: string): Promise<User | null> {
@@ -181,16 +198,9 @@ export async function unlinkTwitterFromUser(userId: string): Promise<User | null
  * @deprecated Use createUserFromWallet for new wallet-first auth
  */
 export async function getOrCreateSystemUser(walletAddress: string): Promise<User> {
-  // First check if user exists with this primary_wallet
-  const existingUser = await getUserByWallet(walletAddress);
+  // Single query to find user by primary_wallet OR linked wallet
+  const existingUser = await getUserByAnyWallet(walletAddress);
   if (existingUser) return existingUser;
-  
-  // Check if a user already owns this wallet in dk_wallets
-  const existingWallet = await getWalletByAddress(walletAddress);
-  if (existingWallet && existingWallet.user_id) {
-    const user = await getUserById(existingWallet.user_id);
-    if (user) return user;
-  }
 
   // Create new user with wallet-first approach
   return createUserFromWallet(walletAddress);
@@ -209,6 +219,7 @@ const ALLOWED_USER_UPDATE_COLUMNS = new Set([
   'tier',
   'primary_wallet',
   'pumpfun_username',
+  'scraped_at',
 ]);
 
 export async function updateUser(id: string, updates: Partial<User>): Promise<User | null> {
@@ -262,6 +273,14 @@ export async function deleteWallet(id: string, userId: string): Promise<boolean>
   const result = await pool.query(
     'DELETE FROM dk_wallets WHERE id = $1 AND user_id = $2',
     [id, userId]
+  );
+  return (result.rowCount ?? 0) > 0;
+}
+
+export async function deleteWalletByAddress(address: string, userId: string): Promise<boolean> {
+  const result = await pool.query(
+    'DELETE FROM dk_wallets WHERE address = $1 AND user_id = $2',
+    [address, userId]
   );
   return (result.rowCount ?? 0) > 0;
 }
@@ -360,10 +379,11 @@ export async function upsertToken(token: NewToken): Promise<Token> {
 }
 
 export async function getTokensForUserWallets(userId: string): Promise<Token[]> {
+  // Use user_id directly (faster) with fallback to wallet join for legacy tokens
   const result = await pool.query(
-    `SELECT t.* FROM dk_tokens t
-     INNER JOIN dk_wallets w ON t.creator_wallet = w.address
-     WHERE w.user_id = $1
+    `SELECT DISTINCT t.* FROM dk_tokens t
+     LEFT JOIN dk_wallets w ON t.creator_wallet = w.address AND w.user_id = $1
+     WHERE t.user_id = $1 OR w.user_id = $1
      ORDER BY t.launch_date DESC`,
     [userId]
   );
@@ -472,6 +492,86 @@ export async function searchUsers(query: string, limit = 10): Promise<User[]> {
     [`%${query}%`, limit]
   );
   return result.rows;
+}
+
+// Upsert user from scraped Axiom data
+export interface ScrapedUserData {
+  total_score: number;
+  tier: string;
+  token_count?: number;
+  migration_count?: number;
+  rug_count?: number;
+  top_mcap?: number | null;
+  scraped_at?: string;
+}
+
+export async function upsertUserByWallet(walletAddress: string, data: ScrapedUserData): Promise<User> {
+  // Check if user exists
+  const existing = await getUserByWallet(walletAddress);
+
+  if (existing) {
+    // Update existing user with all scraped fields
+    const result = await pool.query(
+      `UPDATE dk_users
+       SET total_score = $1, tier = $2, scraped_at = $3,
+           token_count = COALESCE($5, token_count),
+           migration_count = COALESCE($6, migration_count),
+           rug_count = COALESCE($7, rug_count),
+           top_mcap = COALESCE($8, top_mcap),
+           updated_at = NOW()
+       WHERE primary_wallet = $4
+       RETURNING *`,
+      [
+        data.total_score,
+        data.tier,
+        data.scraped_at || new Date().toISOString(),
+        walletAddress,
+        data.token_count ?? null,
+        data.migration_count ?? null,
+        data.rug_count ?? null,
+        data.top_mcap ?? null
+      ]
+    );
+    return result.rows[0];
+  }
+
+  // Create new user with wallet
+  const shortAddress = `${walletAddress.slice(0, 4)}...${walletAddress.slice(-4)}`;
+
+  const result = await pool.query(
+    `INSERT INTO dk_users (
+       twitter_handle, twitter_name, avatar_url,
+       is_verified, primary_wallet, total_score, tier, scraped_at,
+       token_count, migration_count, rug_count, top_mcap
+     )
+     VALUES ($1, $2, $3, TRUE, $4, $5, $6, $7, $8, $9, $10, $11)
+     RETURNING *`,
+    [
+      `dev_${walletAddress.slice(0, 8)}`,
+      `Dev ${shortAddress}`,
+      `https://api.dicebear.com/7.x/identicon/svg?seed=${walletAddress}`,
+      walletAddress,
+      data.total_score,
+      data.tier,
+      data.scraped_at || new Date().toISOString(),
+      data.token_count ?? 0,
+      data.migration_count ?? 0,
+      data.rug_count ?? 0,
+      data.top_mcap ?? null
+    ]
+  );
+
+  const user = result.rows[0];
+
+  // Create associated wallet record
+  await createWallet({
+    user_id: user.id,
+    address: walletAddress,
+    label: 'Primary Wallet',
+    is_primary: true
+  });
+
+  return user;
 }
 
 // KOLs (Key Opinion Leaders)

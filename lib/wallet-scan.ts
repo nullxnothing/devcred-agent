@@ -68,8 +68,8 @@ export interface WalletScanResult {
   tokensLimited: boolean;
 }
 
-/** Max tokens to auto-scan. Wallets with more can manually add CAs. */
-export const MAX_AUTO_SCAN_TOKENS = 50;
+/** Max tokens to auto-scan. Set high to capture full dev history. */
+export const MAX_AUTO_SCAN_TOKENS = 500;
 
 export interface ScanOptions {
   /** Skip rug detection for faster results (default: true for speed) */
@@ -138,7 +138,7 @@ export async function scanWallet(
       totalScore: 0,
       tier: 'unverified',
       tierName: 'Unverified',
-      tierColor: '#BDC3C7',
+      tierColor: 'var(--score-unverified)',
       breakdown: {
         tokenCount: 0,
         migrationCount: 0,
@@ -482,9 +482,10 @@ export async function scanSpecificTokens(
     const migration = migrationMap.get(mintAddress);
     const isMigrated = migration?.migrated || false;
 
-    // Get token name/symbol from market data
-    const name = market ? 'Unknown' : 'Unknown';
-    const symbol = market ? '???' : '???';
+    // Token name/symbol not available from market data APIs
+    // Would require separate Helius DAS getAsset call to fetch metadata
+    const name = 'Unknown';
+    const symbol = '???';
 
     const scoreResult = await calculateTokenScore({
       mintAddress,

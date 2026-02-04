@@ -13,6 +13,7 @@ import { pumpMonitor } from './monitor';
 import { walletQueue } from './queue';
 import { processWallet, getProcessorStats } from './processor';
 import { forumClient } from './forum';
+import { startServer } from './server';
 
 const STATS_INTERVAL_MS = 60 * 1000; // Log stats every minute
 
@@ -41,6 +42,10 @@ async function main() {
 
   // Set up queue processor
   walletQueue.onProcess(processWallet);
+
+  // Start HTTP server for API
+  console.log('[Agent] Starting HTTP server...');
+  startServer();
 
   // Start components
   console.log('[Agent] Starting pump.fun monitor...');

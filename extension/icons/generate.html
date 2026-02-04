@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Generate DevCred Icons</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; background: #1a1a2e; color: #fff; }
+    canvas { border: 1px solid #333; margin: 10px; }
+    .row { display: flex; gap: 20px; align-items: center; }
+    button { padding: 10px 20px; margin-top: 20px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h1>DevCred Icon Generator</h1>
+  <p>Right-click each canvas and "Save image as" to save the icons.</p>
+
+  <div class="row">
+    <div>
+      <h3>16x16</h3>
+      <canvas id="icon16" width="16" height="16"></canvas>
+    </div>
+    <div>
+      <h3>48x48</h3>
+      <canvas id="icon48" width="48" height="48"></canvas>
+    </div>
+    <div>
+      <h3>128x128</h3>
+      <canvas id="icon128" width="128" height="128"></canvas>
+    </div>
+  </div>
+
+  <script>
+    function drawIcon(canvas) {
+      const ctx = canvas.getContext('2d');
+      const size = canvas.width;
+      const padding = size * 0.1;
+      const radius = (size - padding * 2) / 2;
+
+      // Background
+      ctx.fillStyle = '#0f0f1a';
+      ctx.beginPath();
+      ctx.roundRect(0, 0, size, size, size * 0.2);
+      ctx.fill();
+
+      // Traffic light (green)
+      const centerX = size / 2;
+      const centerY = size / 2;
+      const lightRadius = radius * 0.5;
+
+      // Glow
+      const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, lightRadius * 1.5);
+      gradient.addColorStop(0, 'rgba(34, 197, 94, 0.8)');
+      gradient.addColorStop(0.5, 'rgba(34, 197, 94, 0.3)');
+      gradient.addColorStop(1, 'rgba(34, 197, 94, 0)');
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, lightRadius * 1.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Light
+      ctx.fillStyle = '#22c55e';
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, lightRadius, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Highlight
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+      ctx.beginPath();
+      ctx.arc(centerX - lightRadius * 0.3, centerY - lightRadius * 0.3, lightRadius * 0.3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    drawIcon(document.getElementById('icon16'));
+    drawIcon(document.getElementById('icon48'));
+    drawIcon(document.getElementById('icon128'));
+  </script>
+</body>
+</html>

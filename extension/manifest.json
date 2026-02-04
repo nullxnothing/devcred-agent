@@ -1,0 +1,26 @@
+{
+  "manifest_version": 3,
+  "name": "DevCred - Dev Reputation",
+  "version": "1.0.0",
+  "description": "Shows developer reputation scores on Axiom and other Solana trading interfaces",
+  "permissions": ["storage", "activeTab"],
+  "host_permissions": [
+    "https://axiom.trade/*",
+    "https://*.axiom.trade/*",
+    "https://pump.fun/*",
+    "https://devcred.fun/*",
+    "https://devkarmaagent-production.up.railway.app/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["https://axiom.trade/*", "https://*.axiom.trade/*"],
+      "js": ["content.js"],
+      "css": ["styles.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "DevCred"
+  }
+}
