@@ -1,5 +1,5 @@
 /**
- * Wallet-first authentication system for DevKarma
+ * Wallet-first authentication system for Blacklist
  * Users authenticate by signing a message with their Solana wallet
  */
 
@@ -7,9 +7,15 @@ import { SignJWT, jwtVerify, JWTPayload } from 'jose';
 import { cookies } from 'next/headers';
 import { getUserByWallet, createUserFromWallet } from './db';
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || process.env.NEXTAUTH_SECRET || 'fallback-secret-change-in-production'
-);
+function getJwtSecret(): Uint8Array {
+  const secret = process.env.JWT_SECRET || process.env.NEXTAUTH_SECRET;
+  if (!secret) {
+    throw new Error('FATAL: JWT_SECRET or NEXTAUTH_SECRET must be set in environment variables');
+  }
+  return new TextEncoder().encode(secret);
+}
+
+const JWT_SECRET = getJwtSecret();
 
 const SESSION_COOKIE_NAME = 'dk_session';
 const SESSION_DURATION = 7 * 24 * 60 * 60; // 7 days in seconds

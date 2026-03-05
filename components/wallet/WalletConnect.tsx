@@ -96,8 +96,8 @@ export function WalletConnect({ onVerificationComplete, className = '' }: Wallet
 
   if (!user) {
     return (
-      <div className={`p-6 border-2 border-dark/30 bg-card ${className}`}>
-        <div className="flex items-center gap-3 text-dark/60">
+      <div className={`p-6 border-2 border-white/20 bg-black-2 ${className}`}>
+        <div className="flex items-center gap-3 text-white-60">
           <AlertCircle size={20} />
           <span className="text-sm font-medium">Sign in to verify your wallet</span>
         </div>
@@ -107,15 +107,15 @@ export function WalletConnect({ onVerificationComplete, className = '' }: Wallet
 
   if (!connected) {
     return (
-      <div className={`p-6 border-2 border-dark/30 bg-card ${className}`}>
+      <div className={`p-6 border-2 border-white/20 bg-black-2 ${className}`}>
         <button
           onClick={handleConnect}
-          className="flex items-center gap-3 w-full justify-center py-3 px-6 bg-accent text-cream font-bold uppercase tracking-wider hover:bg-accent/90 transition-colors"
+          className="flex items-center gap-3 w-full justify-center py-3 px-6 bg-white text-black font-bold uppercase tracking-wider hover:bg-white/90 transition-colors"
         >
           <Wallet size={20} />
           Connect Wallet
         </button>
-        <p className="text-xs text-dark/60 text-center mt-3">
+        <p className="text-xs text-white-60 text-center mt-3">
           Connect your Solana wallet to verify ownership
         </p>
       </div>
@@ -124,17 +124,17 @@ export function WalletConnect({ onVerificationComplete, className = '' }: Wallet
 
   if (status !== 'success' && !verifiedAddress) {
     return (
-      <div className={`p-6 border-2 border-dark/30 bg-card ${className}`}>
+      <div className={`p-6 border-2 border-white/20 bg-black-2 ${className}`}>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-success"></div>
-            <span className="text-sm font-mono truncate max-w-[200px] text-dark">
+            <span className="text-sm font-mono truncate max-w-[200px] text-white">
               {publicKey?.toBase58()}
             </span>
           </div>
           <button
             onClick={handleDisconnect}
-            className="text-xs text-dark/60 hover:text-dark underline"
+            className="text-xs text-white-60 hover:text-white underline"
           >
             Disconnect
           </button>
@@ -149,7 +149,7 @@ export function WalletConnect({ onVerificationComplete, className = '' }: Wallet
         <button
           onClick={handleVerify}
           disabled={status === 'signing' || status === 'verifying'}
-          className="flex items-center gap-3 w-full justify-center py-3 px-6 bg-accent text-cream font-bold uppercase tracking-wider hover:bg-accent/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex items-center gap-3 w-full justify-center py-3 px-6 bg-white text-black font-bold uppercase tracking-wider hover:bg-white/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {status === 'signing' && (
             <>
@@ -171,7 +171,7 @@ export function WalletConnect({ onVerificationComplete, className = '' }: Wallet
           )}
         </button>
 
-        <p className="text-xs text-dark/60 text-center mt-3">
+        <p className="text-xs text-white-60 text-center mt-3">
           Sign a message to prove wallet ownership. This is free and secure.
         </p>
       </div>

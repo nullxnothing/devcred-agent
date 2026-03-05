@@ -43,11 +43,11 @@ export function BadgeGrid({
     <div className={`${className}`}>
       {title && (
         <div className="flex items-center gap-2 mb-4">
-          <Award size={16} className="text-accent" />
-          <h3 className="text-sm font-bold uppercase tracking-wider text-text-muted">
+          <Award size={16} className="text-white" />
+          <h3 className="text-sm font-bold uppercase tracking-wider text-white-40">
             {title}
           </h3>
-          <span className="text-xs text-text-muted/60">
+          <span className="text-xs text-white-40">
             ({uniqueBadges.length})
           </span>
         </div>
@@ -69,9 +69,9 @@ export function BadgeGrid({
               flex items-center gap-1
               px-3 py-2
               text-xs font-bold uppercase tracking-wider
-              text-text-muted hover:text-dark
-              bg-surface hover:bg-surface/80
-              border border-border
+              text-white-40 hover:text-white
+              bg-black-1 hover:bg-black-1/80
+              border border-white-20
               transition-all duration-200
             "
           >
@@ -119,7 +119,7 @@ export function BadgeRow({
         />
       ))}
       {uniqueBadges.length > maxDisplay && (
-        <span className="text-xs text-text-muted ml-1">
+        <span className="text-xs text-white-40 ml-1">
           +{uniqueBadges.length - maxDisplay}
         </span>
       )}

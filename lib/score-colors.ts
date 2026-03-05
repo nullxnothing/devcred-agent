@@ -1,8 +1,16 @@
 /**
- * Score color utilities for dev scores (0-740) and token scores (0-100)
+ * Monochrome tier color system — white intensity levels with red for FLAGGED.
  */
 
-type ScoreColorLevel = 'legend' | 'elite' | 'proven' | 'builder' | 'verified' | 'low' | 'danger' | 'negative';
+type ScoreColorLevel =
+  | 'sovereign'
+  | 'cleared'
+  | 'operative'
+  | 'vetted'
+  | 'tracked'
+  | 'filed'
+  | 'flagged'
+  | 'ghost';
 
 interface ScoreColorResult {
   level: ScoreColorLevel;
@@ -13,73 +21,73 @@ interface ScoreColorResult {
   hex: string;
 }
 
-const SCORE_COLORS: Record<ScoreColorLevel, { textClass: string; bgClass: string; borderClass: string; glowClass: string; hex: string }> = {
-  legend:   { textClass: 'text-score-legend',   bgClass: 'bg-score-legend',   borderClass: 'border-score-legend',   glowClass: 'score-glow-legend',  hex: 'var(--score-legend)' },
-  elite:    { textClass: 'text-score-elite',    bgClass: 'bg-score-elite',    borderClass: 'border-score-elite',    glowClass: 'score-glow-elite',   hex: 'var(--score-elite)' },
-  proven:   { textClass: 'text-score-proven',   bgClass: 'bg-score-proven',   borderClass: 'border-score-proven',   glowClass: 'score-glow-proven',  hex: 'var(--score-proven)' },
-  builder:  { textClass: 'text-score-builder',  bgClass: 'bg-score-builder',  borderClass: 'border-score-builder',  glowClass: '',                   hex: 'var(--score-builder)' },
-  verified: { textClass: 'text-score-verified', bgClass: 'bg-score-verified', borderClass: 'border-score-verified', glowClass: '',                   hex: 'var(--score-verified)' },
-  low:      { textClass: 'text-score-low',      bgClass: 'bg-score-low',      borderClass: 'border-score-low',      glowClass: '',                   hex: 'var(--score-low)' },
-  danger:   { textClass: 'text-score-danger',   bgClass: 'bg-score-danger',   borderClass: 'border-score-danger',   glowClass: '',                   hex: 'var(--score-danger)' },
-  negative: { textClass: 'text-score-negative', bgClass: 'bg-score-negative', borderClass: 'border-score-negative', glowClass: '',                   hex: 'var(--score-negative)' },
+const SCORE_COLORS: Record<ScoreColorLevel, Omit<ScoreColorResult, 'level'>> = {
+  sovereign: { textClass: 'text-tier-sovereign', bgClass: 'bg-tier-sovereign', borderClass: 'border-tier-sovereign', glowClass: 'tier-sovereign', hex: 'var(--color-tier-sovereign)' },
+  cleared:   { textClass: 'text-tier-cleared',   bgClass: 'bg-tier-cleared',   borderClass: 'border-tier-cleared',   glowClass: '',              hex: 'var(--color-tier-cleared)' },
+  operative: { textClass: 'text-tier-operative', bgClass: 'bg-tier-operative', borderClass: 'border-tier-operative', glowClass: '',              hex: 'var(--color-tier-operative)' },
+  vetted:    { textClass: 'text-tier-vetted',    bgClass: 'bg-tier-vetted',    borderClass: 'border-tier-vetted',    glowClass: '',              hex: 'var(--color-tier-vetted)' },
+  tracked:   { textClass: 'text-tier-tracked',   bgClass: 'bg-tier-tracked',   borderClass: 'border-tier-tracked',   glowClass: '',              hex: 'var(--color-tier-tracked)' },
+  filed:     { textClass: 'text-tier-filed',     bgClass: 'bg-tier-filed',     borderClass: 'border-tier-filed',     glowClass: '',              hex: 'var(--color-tier-filed)' },
+  flagged:   { textClass: 'text-tier-flagged',   bgClass: 'bg-tier-flagged',   borderClass: 'border-tier-flagged',   glowClass: 'tier-flagged',  hex: 'var(--color-tier-flagged)' },
+  ghost:     { textClass: 'text-tier-ghost',     bgClass: 'bg-tier-ghost',     borderClass: 'border-tier-ghost',     glowClass: '',              hex: 'var(--color-tier-ghost)' },
 };
 
 /**
- * Get color classes for a dev score (0-740 scale)
+ * Get tier color classes for a dev score (0-740 scale)
  */
 export function getDevScoreColor(score: number): ScoreColorResult {
   let level: ScoreColorLevel;
 
-  if (score < 0) {
-    level = 'negative';
-  } else if (score < 100) {
-    level = 'danger';
-  } else if (score < 200) {
-    level = 'low';
-  } else if (score < 350) {
-    level = 'verified';
+  if (score <= 0) {
+    level = 'ghost';
+  } else if (score < 150) {
+    level = 'flagged';
+  } else if (score < 300) {
+    level = 'filed';
+  } else if (score < 450) {
+    level = 'tracked';
   } else if (score < 500) {
-    level = 'builder';
+    level = 'vetted';
   } else if (score < 600) {
-    level = 'proven';
+    level = 'operative';
   } else if (score < 700) {
-    level = 'elite';
+    level = 'cleared';
   } else {
-    level = 'legend';
+    level = 'sovereign';
   }
 
   return { level, ...SCORE_COLORS[level] };
 }
 
 /**
- * Get color classes for a token score (0-100 scale, or -100 for rug)
+ * Get tier color classes for a token score (0-100, or negative for rug)
  */
 export function getTokenScoreColor(score: number): ScoreColorResult {
   let level: ScoreColorLevel;
 
-  if (score < 0) {
-    level = 'negative';
+  if (score <= 0) {
+    level = 'ghost';
   } else if (score < 20) {
-    level = 'danger';
+    level = 'flagged';
   } else if (score < 40) {
-    level = 'low';
+    level = 'filed';
   } else if (score < 55) {
-    level = 'verified';
+    level = 'tracked';
   } else if (score < 70) {
-    level = 'builder';
+    level = 'vetted';
   } else if (score < 85) {
-    level = 'proven';
+    level = 'operative';
   } else if (score < 95) {
-    level = 'elite';
+    level = 'cleared';
   } else {
-    level = 'legend';
+    level = 'sovereign';
   }
 
   return { level, ...SCORE_COLORS[level] };
 }
 
 /**
- * Get a simple text color class for inline score display
+ * Shorthand: text class only for inline score display
  */
 export function getDevScoreTextClass(score: number): string {
   return getDevScoreColor(score).textClass;

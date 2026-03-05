@@ -1,20 +1,7 @@
 import type { Metadata } from "next";
-import { Permanent_Marker, DM_Sans, JetBrains_Mono } from "next/font/google";
+import { JetBrains_Mono } from "next/font/google";
 import { Providers } from "@/components/providers";
 import "./globals.css";
-
-const marker = Permanent_Marker({
-  weight: "400",
-  variable: "--font-marker",
-  subsets: ["latin"],
-  display: "swap",
-});
-
-const dmSans = DM_Sans({
-  variable: "--font-dm-sans",
-  subsets: ["latin"],
-  display: "swap",
-});
 
 const jetbrains = JetBrains_Mono({
   variable: "--font-jetbrains",
@@ -23,8 +10,8 @@ const jetbrains = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "DevKarma - Your Launches. Your Legacy.",
-  description: "On-chain reputation scoring for Solana token creators. Track dev history, detect rugs, build trust.",
+  title: "BLACKLIST — We see everything.",
+  description: "Developer threat assessment for Solana token creators. On-chain surveillance scoring. We see everything.",
   icons: {
     icon: [
       { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
@@ -43,9 +30,8 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark" suppressHydrationWarning>
       <body
-        className={`${marker.variable} ${dmSans.variable} ${jetbrains.variable} antialiased bg-cream text-dark font-body`}
+        className={`${jetbrains.variable} antialiased bg-black text-white font-mono`}
       >
-        {/* Skip link for keyboard navigation */}
         <a href="#main-content" className="skip-link">
           Skip to main content
         </a>

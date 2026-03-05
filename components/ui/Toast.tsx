@@ -37,10 +37,10 @@ const ICONS: Record<ToastType, React.ElementType> = {
 };
 
 const STYLES: Record<ToastType, string> = {
-  success: 'bg-success-light border-success-border text-success dark:bg-success/20 dark:border-success dark:text-success',
-  error: 'bg-error-light border-error-border text-error dark:bg-error/20 dark:border-error dark:text-error',
-  warning: 'bg-warning-light border-warning-border text-warning dark:bg-warning/20 dark:border-warning dark:text-warning',
-  info: 'bg-card border-border text-dark dark:bg-dark-medium dark:border-border dark:text-dark',
+  success: 'border-white-40 text-white',
+  error: 'border-red text-red',
+  warning: 'border-white-60 text-white-90',
+  info: 'border-white-20 text-white-90',
 };
 
 function ToastItem({ toast, onRemove }: { toast: Toast; onRemove: (id: string) => void }) {
@@ -48,17 +48,17 @@ function ToastItem({ toast, onRemove }: { toast: Toast; onRemove: (id: string) =
 
   return (
     <div
-      className={`flex items-center gap-3 px-4 py-3 border-2 shadow-[4px_4px_0px_0px_var(--border)] animate-in slide-in-from-right-full duration-300 ${STYLES[toast.type]}`}
+      className={`flex items-center gap-3 px-4 py-3 bg-black-2 border font-mono ${STYLES[toast.type]} animate-in slide-in-from-right-full duration-300`}
       role="alert"
     >
-      <Icon size={20} className="shrink-0" />
-      <span className="flex-1 text-sm font-medium">{toast.message}</span>
+      <Icon size={16} className="shrink-0" />
+      <span className="flex-1 text-xs font-mono">{toast.message}</span>
       <button
         onClick={() => onRemove(toast.id)}
-        className="p-1 hover:opacity-70 transition-opacity shrink-0"
+        className="p-1 hover:opacity-70 transition-opacity shrink-0 text-white-40"
         aria-label="Dismiss"
       >
-        <X size={16} />
+        <X size={14} />
       </button>
     </div>
   );
@@ -74,8 +74,6 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const addToast = useCallback((message: string, type: ToastType = 'info') => {
     const id = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
     setToasts((prev) => [...prev, { id, message, type }]);
-
-    // Auto-remove after 4 seconds
     setTimeout(() => removeToast(id), 4000);
   }, [removeToast]);
 
@@ -90,7 +88,6 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={value}>
       {children}
-      {/* Toast Container */}
       <div
         className="fixed bottom-4 right-4 z-[100] flex flex-col gap-2 max-w-sm w-full pointer-events-none"
         aria-live="polite"

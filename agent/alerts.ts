@@ -19,16 +19,16 @@ const ALERT_CONFIGS: AlertConfig[] = [
     type: 'high_risk_deployer',
     check: (result) => result.breakdown.rugCount >= 3,
     createPost: (result, tokenName, tokenSymbol) => ({
-      title: `DevCred Alert: High-Risk Deployer (${result.breakdown.rugCount} Rugs)`,
+      title: `Blacklist Alert: High-Risk Deployer (${result.breakdown.rugCount} Rugs)`,
       body: formatHighRiskAlert(result, tokenName, tokenSymbol),
       tags: ['progress-update', 'trading', 'security'],
     }),
   },
   {
     type: 'reputable_deployer',
-    check: (result) => result.tier === 'legend' || result.tier === 'elite',
+    check: (result) => result.tier === 'sovereign' || result.tier === 'cleared',
     createPost: (result, tokenName, tokenSymbol) => ({
-      title: `DevCred Alert: ${result.tierName} Dev Launching ${tokenSymbol || 'New Token'}`,
+      title: `Blacklist Alert: ${result.tierName} Dev Launching ${tokenSymbol || 'New Token'}`,
       body: formatReputableAlert(result, tokenName, tokenSymbol),
       tags: ['progress-update', 'trading'],
     }),
@@ -42,13 +42,13 @@ function formatHighRiskAlert(
   tokenSymbol?: string
 ): string {
   return `
-DevCred Agent detected a **high-risk deployer** launching a new token.
+Blacklist Agent detected a **high-risk deployer** launching a new token.
 
 **Token:** ${tokenName || 'Unknown'} (${tokenSymbol || '???'})
 **Deployer:** \`${result.walletAddress}\`
 
 **Risk Analysis:**
-- DevCred Score: **${result.totalScore}** (${result.tierName})
+- Blacklist Score: **${result.totalScore}** (${result.tierName})
 - Previous Rugs: **${result.breakdown.rugCount}**
 - Total Tokens Launched: ${result.breakdown.tokenCount}
 - Migrations: ${result.breakdown.migrationCount}
@@ -56,7 +56,7 @@ DevCred Agent detected a **high-risk deployer** launching a new token.
 This wallet has a history of abandoned/rugged projects. Exercise caution.
 
 ---
-*Automated alert from DevCred Agent - Colosseum Hackathon*
+*Automated alert from Blacklist Agent*
   `.trim();
 }
 
@@ -66,13 +66,13 @@ function formatReputableAlert(
   tokenSymbol?: string
 ): string {
   return `
-DevCred Agent detected a **reputable developer** launching a new token.
+Blacklist Agent detected a **reputable developer** launching a new token.
 
 **Token:** ${tokenName || 'Unknown'} (${tokenSymbol || '???'})
 **Deployer:** \`${result.walletAddress}\`
 
 **Track Record:**
-- DevCred Score: **${result.totalScore}** (${result.tierName})
+- Blacklist Score: **${result.totalScore}** (${result.tierName})
 - Successful Migrations: ${result.breakdown.migrationCount}
 - Total Tokens: ${result.breakdown.tokenCount}
 - Rugs: ${result.breakdown.rugCount}
@@ -80,7 +80,7 @@ DevCred Agent detected a **reputable developer** launching a new token.
 This developer has a proven track record of successful token launches.
 
 ---
-*Automated alert from DevCred Agent - Colosseum Hackathon*
+*Automated alert from Blacklist Agent*
   `.trim();
 }
 

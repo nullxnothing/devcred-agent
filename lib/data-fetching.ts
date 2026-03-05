@@ -1,5 +1,5 @@
 import { getLeaderboard as dbGetLeaderboard, getUserByTwitterHandle, getOrCreateSystemUser, getWalletsByUserId, getTokensForUserWallets, updateUser, addScoreHistory, recordProfileView, upsertToken, updateUserRank, getKolByUserId, getKolStatusForUsers, getKolsWithUsers, getAllKols } from './db';
-import { getTierInfo, DevTier, calculateDevScore, calculateTokenScoresBatch, TokenScoreInput } from './scoring';
+import { getTierInfo, DevTier, calculateDevScore, calculateTokenScoresBatch, TokenScoreInput, determineTier } from './scoring';
 import type { Kol } from '@/types/database';
 import { getMultipleTokensMarketData } from './dexscreener';
 import { detectRugPattern, getMigratedTokensFromSwapHistory, batchGetHolderCountsQuick } from './helius';
@@ -168,9 +168,12 @@ async function enrichTokensWithMarketData(
 
   const scoreResults = await calculateTokenScoresBatch(scoreInputs);
 
+  // Use Map for O(1) lookups instead of O(n) .find()
+  const scoreMap = new Map(scoreResults.map(r => [r.mintAddress, r]));
+
   return tokens.map((token) => {
     const marketData = marketDataMap.get(token.mint_address) || null;
-    const scoreResult = scoreResults.find(r => r.mintAddress === token.mint_address);
+    const scoreResult = scoreMap.get(token.mint_address);
     return mapTokenWithMarketData(token, marketData, scoreResult?.score || token.score || 10);
   });
 }
@@ -198,16 +201,15 @@ export async function getLeaderboardData(limit: number = 50) {
   const kolStatusMap = await getKolStatusForUsers(userIds);
 
   return users.map((user, index) => {
-    // Always calculate tier based on score to ensure consistency
-    let tier: DevTier = 'unverified';
-
-    if (user.total_score >= 700) tier = 'legend';
-    else if (user.total_score >= 600) tier = 'elite';
-    else if (user.total_score >= 500) tier = 'rising_star';
-    else if (user.total_score >= 450) tier = 'proven';
-    else if (user.total_score >= 300) tier = 'builder';
-    else if (user.total_score >= 150) tier = 'verified';
-    else if (user.total_score < 0) tier = 'penalized';
+    const tier = determineTier({
+      score: user.total_score,
+      migrationCount: user.migration_count || 0,
+      tokenCount: user.token_count || 0,
+      walletCount: 1,
+      accountAgeMonths: Math.max(0, Math.floor((Date.now() - new Date(user.created_at).getTime()) / (30 * 24 * 60 * 60 * 1000))),
+      rugCount: user.rug_count || 0,
+      maxAthMarketCap: user.top_mcap || 0,
+    });
 
     const tierInfo = getTierInfo(tier);
 
@@ -304,9 +306,12 @@ export async function getProfileData(handle: string, viewerIp?: string, forceRef
     const user = await resolveUserFromHandle(handle);
     if (!user) return null;
 
-    // Step 2: Get wallets and existing tokens
-    const wallets = await getWalletsByUserId(user.id);
-    let tokens = await getTokensForUserWallets(user.id);
+    // Step 2: Get wallets and existing tokens in parallel
+    const [wallets, initialTokens] = await Promise.all([
+      getWalletsByUserId(user.id),
+      getTokensForUserWallets(user.id),
+    ]);
+    let tokens = initialTokens;
 
     // Step 3: Check if we have a recent Axiom scrape (within 24h)
     // If so, trust the cached score from extension instead of recalculating
@@ -317,7 +322,7 @@ export async function getProfileData(handle: string, viewerIp?: string, forceRef
 
     if (hasRecentScrape && user.total_score > 0 && !forceRefresh) {
       // Use cached Axiom score - skip recalculation
-      const cachedTier = (user.tier as DevTier) || 'unverified';
+      const cachedTier = (user.tier as DevTier) || 'ghost';
       const tierInfo = getTierInfo(cachedTier);
       const kol = await getKolByUserId(user.id);
 
@@ -512,6 +517,170 @@ export async function getProfileData(handle: string, viewerIp?: string, forceRef
   }
 }
 
+// ==================== STREAMING DATA FETCHERS ====================
+
+export interface ProfileHeaderData {
+  user: {
+    id: string;
+    twitterHandle: string | null;
+    twitterName: string | null;
+    avatarUrl: string | null;
+    bio: string | null;
+    isVerified: boolean;
+    isKol: boolean;
+    rank: number | null;
+    createdAt: string;
+  };
+  score: {
+    total: number;
+    tier: string;
+    tierName: string;
+    tierColor: string;
+  };
+  wallets: Array<{
+    id: string;
+    address: string;
+    label: string | null;
+    isPrimary: boolean;
+  }>;
+  stats: {
+    totalTokens: number;
+    migratedTokens: number;
+  };
+}
+
+/** Fast header data using cached score - for streaming */
+export async function getProfileHeader(handle: string): Promise<ProfileHeaderData | null> {
+  try {
+    const user = await resolveUserFromHandle(handle);
+    if (!user) return null;
+
+    // Fetch independent data in parallel
+    const [wallets, kol, tokens] = await Promise.all([
+      getWalletsByUserId(user.id),
+      getKolByUserId(user.id),
+      getTokensForUserWallets(user.id),
+    ]);
+
+    const tier = (user.tier as DevTier) || determineTier({
+      score: user.total_score,
+      migrationCount: user.migration_count || 0,
+      tokenCount: user.token_count || 0,
+      walletCount: wallets.length,
+      accountAgeMonths: Math.max(0, Math.floor((Date.now() - new Date(user.created_at).getTime()) / (30 * 24 * 60 * 60 * 1000))),
+      rugCount: user.rug_count || 0,
+      maxAthMarketCap: user.top_mcap || 0,
+    });
+
+    const tierInfo = getTierInfo(tier);
+    const migratedCount = tokens.filter(t => t.migrated).length;
+
+    return {
+      user: {
+        id: user.id,
+        twitterHandle: user.twitter_handle,
+        twitterName: user.twitter_name,
+        avatarUrl: user.avatar_url,
+        bio: user.bio,
+        isVerified: user.is_verified,
+        isKol: !!kol,
+        rank: user.rank,
+        createdAt: user.created_at,
+      },
+      score: {
+        total: user.total_score,
+        tier,
+        tierName: tierInfo.name,
+        tierColor: tierInfo.color,
+      },
+      wallets: wallets.map((w) => ({
+        id: w.id,
+        address: w.address,
+        label: w.label,
+        isPrimary: w.is_primary,
+      })),
+      stats: {
+        totalTokens: tokens.length,
+        migratedTokens: migratedCount,
+      },
+    };
+  } catch (error) {
+    console.error('Error fetching profile header:', error);
+    return null;
+  }
+}
+
+export interface ProfileTokensData {
+  tokens: Array<{
+    mint: string;
+    name: string;
+    symbol: string;
+    launchDate: string;
+    migrated: boolean;
+    marketCap: number | null;
+    volume24h: number | null;
+    totalVolume: number | null;
+    athMarketCap?: number | null;
+    status: string;
+    score: number;
+    rugSeverity?: 'soft' | 'hard' | null;
+    creationVerified?: boolean;
+  }>;
+  badges: Array<{
+    mint: string;
+    name: string;
+    symbol: string;
+    athMarketCap?: number | null;
+    migrated: boolean;
+    score: number;
+  }>;
+}
+
+/** Fetch tokens with enrichment - slower, for streaming */
+export async function getProfileTokens(userId: string, wallets: Array<{ address: string }>): Promise<ProfileTokensData> {
+  try {
+    let tokens = await getTokensForUserWallets(userId);
+
+    // Scan for new tokens if none exist
+    if (tokens.length === 0 && wallets.length > 0) {
+      const primaryWallet = wallets[0];
+      tokens = await scanAndSaveTokens(primaryWallet.address, userId);
+    }
+
+    // Enrich with market data
+    const tokenScores = await enrichTokensWithMarketData(tokens);
+
+    return {
+      tokens: tokenScores.map(t => ({
+        mint: t.mint,
+        name: t.name,
+        symbol: t.symbol,
+        launchDate: t.launchDate,
+        migrated: t.migrated,
+        marketCap: t.marketCap,
+        volume24h: t.volume24h,
+        totalVolume: t.totalVolume,
+        athMarketCap: t.athMarketCap,
+        status: t.status,
+        score: t.score,
+        rugSeverity: t.rugSeverity,
+        creationVerified: t.creationVerified,
+      })),
+      badges: tokenScores.map(t => ({
+        mint: t.mint,
+        name: t.name,
+        symbol: t.symbol,
+        athMarketCap: t.athMarketCap,
+        migrated: t.migrated,
+        score: t.score,
+      })),
+    };
+  } catch (error) {
+    console.error('Error fetching profile tokens:', error);
+    return { tokens: [], badges: [] };
+  }
+}
+
 // KOL Leaderboard Types
 export interface KolLeaderboardEntry {
   id: string;
@@ -543,20 +712,19 @@ export async function getKolLeaderboardData(limit: number = 50): Promise<KolLead
   const kols = await getKolsWithUsers(limit);
 
   return kols.map((kol) => {
-    let tier: DevTier = 'unverified';
-    let tierInfo = getTierInfo(tier);
-
+    let tier: DevTier = 'ghost';
     if (kol.user_total_score !== undefined && kol.user_total_score !== null) {
-      const score = Number(kol.user_total_score);
-      if (score >= 700) tier = 'legend';
-      else if (score >= 600) tier = 'elite';
-      else if (score >= 500) tier = 'rising_star';
-      else if (score >= 450) tier = 'proven';
-      else if (score >= 300) tier = 'builder';
-      else if (score >= 150) tier = 'verified';
-      else if (score < 0) tier = 'penalized';
-      tierInfo = getTierInfo(tier);
+      tier = (kol.user_tier as DevTier) || determineTier({
+        score: Number(kol.user_total_score),
+        migrationCount: 0,
+        tokenCount: 0,
+        walletCount: 1,
+        accountAgeMonths: 0,
+        rugCount: 0,
+        maxAthMarketCap: 0,
+      });
     }
+    const tierInfo = getTierInfo(tier);
 
     const hasUser = kol.user_id && kol.user_twitter_handle;
 

@@ -1,7 +1,7 @@
 /**
- * Scoring Engine for DevCred
+ * Scoring Engine — Blacklist Threat Assessment
  *
- * SIMPLIFIED SCORING SYSTEM:
+ * SCORING SYSTEM:
  * - Token scores: 0-100 per token
  *   - Migration: 0-30 (did it successfully migrate to DEX?)
  *   - Traction: 0-25 (ATH market cap achieved)
@@ -58,17 +58,17 @@ const SCORE_CONSTANTS = {
 
 // Tier thresholds
 export const TIER_THRESHOLDS = {
-  LEGEND: { minScore: 700, minMigrations: 5, minMonths: 6 },
-  ELITE: { minScore: 600, minMigrations: 3 },
-  RISING_STAR: { minScore: 500, minMcap: 500_000 }, // Single exceptional launch ($500K+)
-  PROVEN: { minScore: 450, minMigrations: 1 },
-  BUILDER: { minScore: 300, minTokens: 3 },
-  VERIFIED: { minScore: 150 },
-  PENALIZED: { maxScore: 150 },
-  UNVERIFIED: {},
+  SOVEREIGN: { minScore: 700, minMigrations: 5, minMonths: 6 },
+  CLEARED: { minScore: 600, minMigrations: 3 },
+  OPERATIVE: { minScore: 500, minMcap: 500_000 },
+  VETTED: { minScore: 450, minMigrations: 1 },
+  TRACKED: { minScore: 300, minTokens: 3 },
+  FILED: { minScore: 150 },
+  FLAGGED: { maxScore: 150 },
+  GHOST: {},
 } as const;
 
-export type DevTier = 'legend' | 'elite' | 'rising_star' | 'proven' | 'builder' | 'verified' | 'penalized' | 'unverified';
+export type DevTier = 'sovereign' | 'cleared' | 'operative' | 'vetted' | 'tracked' | 'filed' | 'flagged' | 'ghost';
 
 export interface TokenScoreBreakdown {
   migration: number;      // 0-30
@@ -297,7 +297,7 @@ export function calculateDevScore(input: DevScoreInput): DevScoreResult {
   if (tokens.length === 0) {
     return {
       score: 0,
-      tier: walletCount > 0 ? 'verified' : 'unverified',
+      tier: walletCount > 0 ? 'filed' : 'ghost',
       breakdown: {
         baseScore: 0,
         tokenCount: 0,
@@ -408,7 +408,7 @@ export function calculateDevScore(input: DevScoreInput): DevScoreResult {
 /**
  * Determine dev tier based on score and metrics
  */
-function determineTier(metrics: {
+export function determineTier(metrics: {
   score: number;
   migrationCount: number;
   tokenCount: number;
@@ -419,63 +419,63 @@ function determineTier(metrics: {
 }): DevTier {
   const { score, migrationCount, tokenCount, walletCount, accountAgeMonths, rugCount, maxAthMarketCap } = metrics;
 
-  // Penalized: Has rugs and score below threshold
-  if (rugCount > 0 && score < TIER_THRESHOLDS.VERIFIED.minScore) {
-    return 'penalized';
+  // FLAGGED: Has rugs and score below threshold
+  if (rugCount > 0 && score < TIER_THRESHOLDS.FILED.minScore) {
+    return 'flagged';
   }
 
-  // Legend: 700+ score, 5+ migrations, 6+ months
+  // SOVEREIGN: 700+ score, 5+ migrations, 6+ months
   if (
-    score >= TIER_THRESHOLDS.LEGEND.minScore &&
-    migrationCount >= TIER_THRESHOLDS.LEGEND.minMigrations &&
-    accountAgeMonths >= TIER_THRESHOLDS.LEGEND.minMonths
+    score >= TIER_THRESHOLDS.SOVEREIGN.minScore &&
+    migrationCount >= TIER_THRESHOLDS.SOVEREIGN.minMigrations &&
+    accountAgeMonths >= TIER_THRESHOLDS.SOVEREIGN.minMonths
   ) {
-    return 'legend';
+    return 'sovereign';
   }
 
-  // Elite: 600+ score, 3+ migrations
+  // CLEARED: 600+ score, 3+ migrations
   if (
-    score >= TIER_THRESHOLDS.ELITE.minScore &&
-    migrationCount >= TIER_THRESHOLDS.ELITE.minMigrations
+    score >= TIER_THRESHOLDS.CLEARED.minScore &&
+    migrationCount >= TIER_THRESHOLDS.CLEARED.minMigrations
   ) {
-    return 'elite';
+    return 'cleared';
   }
 
-  // Rising Star: 500+ score, at least one $500K+ launch (exceptional single launch)
+  // OPERATIVE: 500+ score, at least one $500K+ launch
   if (
-    score >= TIER_THRESHOLDS.RISING_STAR.minScore &&
-    maxAthMarketCap >= TIER_THRESHOLDS.RISING_STAR.minMcap
+    score >= TIER_THRESHOLDS.OPERATIVE.minScore &&
+    maxAthMarketCap >= TIER_THRESHOLDS.OPERATIVE.minMcap
   ) {
-    return 'rising_star';
+    return 'operative';
   }
 
-  // Proven: 450+ score, 1+ migration
+  // VETTED: 450+ score, 1+ migration
   if (
-    score >= TIER_THRESHOLDS.PROVEN.minScore &&
-    migrationCount >= TIER_THRESHOLDS.PROVEN.minMigrations
+    score >= TIER_THRESHOLDS.VETTED.minScore &&
+    migrationCount >= TIER_THRESHOLDS.VETTED.minMigrations
   ) {
-    return 'proven';
+    return 'vetted';
   }
 
-  // Builder: 300+ score, 3+ tokens
+  // TRACKED: 300+ score, 3+ tokens
   if (
-    score >= TIER_THRESHOLDS.BUILDER.minScore &&
-    tokenCount >= TIER_THRESHOLDS.BUILDER.minTokens
+    score >= TIER_THRESHOLDS.TRACKED.minScore &&
+    tokenCount >= TIER_THRESHOLDS.TRACKED.minTokens
   ) {
-    return 'builder';
+    return 'tracked';
   }
 
-  // Verified: 150+ score
-  if (score >= TIER_THRESHOLDS.VERIFIED.minScore) {
-    return 'verified';
+  // FILED: 150+ score
+  if (score >= TIER_THRESHOLDS.FILED.minScore) {
+    return 'filed';
   }
 
   // Below 150 with wallets
   if (walletCount > 0) {
-    return rugCount > 0 ? 'penalized' : 'verified';
+    return rugCount > 0 ? 'flagged' : 'filed';
   }
 
-  return 'unverified';
+  return 'ghost';
 }
 
 /**
@@ -497,44 +497,44 @@ export function getTierInfo(tier: DevTier): {
   description: string;
 } {
   const tierInfo: Record<DevTier, { name: string; color: string; description: string }> = {
-    legend: {
-      name: 'Legend',
-      color: 'var(--score-legend)',
+    sovereign: {
+      name: 'SOVEREIGN',
+      color: 'var(--color-tier-sovereign)',
       description: '5+ migrations, 700+ score, 6+ months',
     },
-    elite: {
-      name: 'Elite',
-      color: 'var(--score-elite)',
+    cleared: {
+      name: 'CLEARED',
+      color: 'var(--color-tier-cleared)',
       description: '3+ migrations, 600+ score',
     },
-    rising_star: {
-      name: 'Rising Star',
-      color: 'var(--score-rising)',
+    operative: {
+      name: 'OPERATIVE',
+      color: 'var(--color-tier-operative)',
       description: 'Exceptional launch ($500K+ ATH)',
     },
-    proven: {
-      name: 'Proven',
-      color: 'var(--score-proven)',
+    vetted: {
+      name: 'VETTED',
+      color: 'var(--color-tier-vetted)',
       description: '1+ migration, 450+ score',
     },
-    builder: {
-      name: 'Builder',
-      color: 'var(--score-builder)',
+    tracked: {
+      name: 'TRACKED',
+      color: 'var(--color-tier-tracked)',
       description: '3+ tokens, 300+ score',
     },
-    verified: {
-      name: 'Verified',
-      color: 'var(--score-verified)',
+    filed: {
+      name: 'FILED',
+      color: 'var(--color-tier-filed)',
       description: 'Wallet verified, 150+ score',
     },
-    penalized: {
-      name: 'Penalized',
-      color: 'var(--score-penalized)',
+    flagged: {
+      name: 'FLAGGED',
+      color: 'var(--color-tier-flagged)',
       description: 'Has rug history',
     },
-    unverified: {
-      name: 'Unverified',
-      color: 'var(--score-unverified)',
+    ghost: {
+      name: 'GHOST',
+      color: 'var(--color-tier-ghost)',
       description: 'No verified wallets',
     },
   };
@@ -612,10 +612,11 @@ export function estimateDevScore(params: {
     }
   }
 
-  // Rug penalties
-  if (params.rugCount) {
-    score -= params.rugCount * SCORE_CONSTANTS.DEV_RUG_PENALTY;
-  }
+  // Rug penalties — differentiated like calculateDevScore
+  const hardRugs = params.hardRugCount || 0;
+  const softRugs = (params.rugCount || 0) - hardRugs;
+  score -= hardRugs * SCORE_CONSTANTS.DEV_HARD_RUG_PENALTY;
+  score -= Math.max(0, softRugs) * SCORE_CONSTANTS.DEV_SOFT_RUG_PENALTY;
 
   return Math.max(
     SCORE_CONSTANTS.FLOOR_DEV_SCORE,
@@ -639,7 +640,7 @@ export function calculateDevScoreFromAggregate(params: {
   if (tokenCount === 0) {
     return {
       score: 0,
-      tier: 'unverified',
+      tier: 'ghost',
       breakdown: {
         baseScore: 0,
         tokenCount: 0,

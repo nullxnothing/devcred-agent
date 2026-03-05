@@ -16,23 +16,23 @@ export default function ProfileError({
 
   return (
     <div className="min-h-[60vh] flex flex-col items-center justify-center px-4">
-      <div className="text-center max-w-md">
-        <h1 className="text-5xl font-display-mock text-dark mb-4">PROFILE ERROR</h1>
-        <p className="text-lg text-dark/70 mb-6">
-          Could not load this profile. The user may not exist or there was a network issue.
-        </p>
-        <div className="flex gap-4 justify-center">
+      <div className="terminal-card p-8 max-w-md w-full">
+        <div className="font-mono text-xs space-y-2 mb-6">
+          <p className="text-red">&gt; ERROR: SUBJECT NOT FOUND</p>
+          <p className="text-white-60">&gt; Could not retrieve dossier. Subject may not exist.</p>
+        </div>
+        <div className="flex gap-4">
           <button
             onClick={reset}
-            className="px-6 py-3 bg-dark text-cream font-bold uppercase text-sm tracking-wider border-2 border-dark hover:bg-accent hover:border-accent transition-colors"
+            className="px-4 py-2 bg-white text-black font-mono font-bold uppercase text-xs tracking-widest border border-white hover:bg-white-90 transition-colors"
           >
-            Retry
+            [ RETRY ]
           </button>
           <Link
             href="/leaderboard"
-            className="px-6 py-3 bg-cream text-dark font-bold uppercase text-sm tracking-wider border-2 border-dark hover:bg-dark/5 transition-colors"
+            className="px-4 py-2 bg-transparent text-white-60 font-mono font-bold uppercase text-xs tracking-widest border border-white-20 hover:text-white hover:border-white transition-colors"
           >
-            Leaderboard
+            [ RANKINGS ]
           </Link>
         </div>
       </div>

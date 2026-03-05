@@ -1,6 +1,6 @@
 export const TOKEN_CONFIG = {
-  name: 'DevKarma',
-  symbol: 'KARMA',
+  name: 'Blacklist',
+  symbol: 'BLKLIST',
   contractAddress: 'Coming Soon',
   totalSupply: '1B',
   links: {
@@ -14,7 +14,7 @@ export const AIRDROP_CRITERIA = [
   {
     id: 'leaderboard',
     title: 'Top Builders',
-    description: 'Top 100 on the DevCred leaderboard at snapshot',
+    description: 'Top 100 on the Blacklist leaderboard at snapshot',
     icon: 'Trophy',
   },
   {
@@ -26,7 +26,7 @@ export const AIRDROP_CRITERIA = [
   {
     id: 'holders',
     title: 'Token Holders',
-    description: 'Hold $KARMA tokens in your wallet',
+    description: 'Hold $BLKLIST tokens in your wallet',
     icon: 'Coins',
   },
   {

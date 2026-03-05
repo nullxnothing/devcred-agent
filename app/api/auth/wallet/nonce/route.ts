@@ -3,45 +3,30 @@
  * No session required - this is the first step in wallet login
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { randomBytes } from 'crypto';
 import { setNoncePublic, cleanupExpiredNonces, createSignMessage } from '@/lib/nonce-store';
-import { checkRateLimit, getRateLimitIdentifier, rateLimitHeaders, RATE_LIMIT_CONFIGS } from '@/lib/api-rate-limiter';
+import { checkRateLimit, getRateLimitIdentifier, RATE_LIMIT_CONFIGS } from '@/lib/api-rate-limiter';
+import { apiOk, apiRateLimited, apiError } from '@/lib/api-response';
+import { validateBody, getClientIp } from '@/lib/api-validation';
+import { walletNonceRequestSchema } from '@/lib/validation';
 
 const NONCE_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
 
 export async function POST(request: NextRequest) {
   try {
-    const { walletAddress } = await request.json();
-
-    if (!walletAddress || typeof walletAddress !== 'string') {
-      return NextResponse.json(
-        { error: 'Wallet address is required' },
-        { status: 400 }
-      );
-    }
-
-    // Validate Solana address format (base58, 32-44 chars)
-    const solanaAddressRegex = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
-    if (!solanaAddressRegex.test(walletAddress)) {
-      return NextResponse.json(
-        { error: 'Invalid Solana wallet address' },
-        { status: 400 }
-      );
-    }
+    // Validate request body
+    const validation = await validateBody(request, walletNonceRequestSchema);
+    if (validation.error) return validation.error;
+    const { walletAddress } = validation.data;
 
     // Rate limiting by IP + wallet address
-    const ip = request.headers.get('x-forwarded-for')?.split(',')[0] || 
-               request.headers.get('x-real-ip') || 
-               'unknown';
+    const ip = getClientIp(request);
     const rateLimitId = getRateLimitIdentifier('wallet-auth-nonce', `${ip}:${walletAddress}`);
     const rateLimit = checkRateLimit(rateLimitId, RATE_LIMIT_CONFIGS.walletNonce);
-    
+
     if (!rateLimit.allowed) {
-      return NextResponse.json(
-        { error: 'Too many nonce requests. Please wait before trying again.' },
-        { status: 429, headers: rateLimitHeaders(rateLimit) }
-      );
+      return apiRateLimited(rateLimit, 'Too many nonce requests. Please wait before trying again.');
     }
 
     // Clean up old nonces (non-blocking)
@@ -56,17 +41,13 @@ export async function POST(request: NextRequest) {
     // Create the message for the user to sign
     const message = createSignMessage(walletAddress, nonce);
 
-    return NextResponse.json({
+    return apiOk({
       message,
       nonce,
       expiresIn: NONCE_EXPIRY_MS,
     });
   } catch (error) {
     console.error('Error generating auth nonce:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    return NextResponse.json(
-      { error: 'Failed to generate nonce', details: errorMessage },
-      { status: 500 }
-    );
+    return apiError(error);
   }
 }

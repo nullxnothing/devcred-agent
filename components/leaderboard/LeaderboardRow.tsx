@@ -24,17 +24,17 @@ export interface LeaderboardRowProps {
 }
 
 const medalColors = {
-  1: { bg: 'bg-medal-gold', text: 'text-cream', border: 'border-medal-gold' },
-  2: { bg: 'bg-medal-silver', text: 'text-dark', border: 'border-medal-silver' },
-  3: { bg: 'bg-medal-bronze', text: 'text-cream', border: 'border-medal-bronze' },
+  1: { bg: 'bg-medal-gold', text: 'text-black', border: 'border-medal-gold' },
+  2: { bg: 'bg-medal-silver', text: 'text-white', border: 'border-medal-silver' },
+  3: { bg: 'bg-medal-bronze', text: 'text-black', border: 'border-medal-bronze' },
 };
 
 // Score glow classes by tier
 const getScoreGlowClass = (tier: string): string => {
   switch (tier.toLowerCase()) {
-    case 'legend': return 'score-glow-legend';
-    case 'elite': return 'score-glow-elite';
-    case 'proven': return 'score-glow-proven';
+    case 'sovereign': return 'score-glow-legend';
+    case 'cleared': return 'score-glow-elite';
+    case 'vetted': return 'score-glow-proven';
     default: return '';
   }
 };
@@ -42,10 +42,10 @@ const getScoreGlowClass = (tier: string): string => {
 // Progress bar classes by tier (animated gradients)
 const getProgressBarClass = (tier: string): string => {
   switch (tier.toLowerCase()) {
-    case 'legend': return 'progress-legend';
-    case 'elite': return 'progress-elite';
-    case 'proven': return 'progress-proven';
-    case 'builder': return 'progress-builder';
+    case 'sovereign': return 'progress-legend';
+    case 'cleared': return 'progress-elite';
+    case 'vetted': return 'progress-proven';
+    case 'tracked': return 'progress-builder';
     default: return '';
   }
 };
@@ -73,11 +73,11 @@ export function TopThreeRowClient({ dev, position }: { dev: LeaderboardRowProps;
     >
       <Link
         href={`/profile/${encodeURIComponent(profileIdentifier)}`}
-        className="group flex items-center gap-2.5 sm:gap-4 md:gap-5 p-3 sm:p-4 md:p-5 bg-card border-2 border-border lg:hover:bg-cream active:bg-cream/50 transition-colors shadow-[2px_2px_0px_0px_var(--border)] sm:shadow-[3px_3px_0px_0px_var(--border)] lg:hover:shadow-[1px_1px_0px_0px_var(--border)] lg:hover:translate-x-0.5 lg:hover:translate-y-0.5"
+        className="group flex items-center gap-2.5 sm:gap-4 md:gap-5 p-3 sm:p-4 md:p-5 bg-black-2 border-2 border-white-20 lg:hover:bg-white/10 active:bg-white/5 transition-colors lg:hover:translate-x-0.5 lg:hover:translate-y-0.5"
       >
         {/* Rank Medal */}
         <div className={`w-9 h-9 sm:w-10 sm:h-10 md:w-12 md:h-12 ${medal.bg} border-2 ${medal.border} flex items-center justify-center shrink-0`}>
-          <span className={`font-stat text-base sm:text-lg md:text-xl ${medal.text}`}>
+          <span className={`font-mono font-bold text-base sm:text-lg md:text-xl ${medal.text}`}>
             {position}
           </span>
         </div>
@@ -88,25 +88,25 @@ export function TopThreeRowClient({ dev, position }: { dev: LeaderboardRowProps;
             src={dev.avatarUrl}
             alt={displayName}
             size="md"
-            className="border-2 border-border sm:hidden"
+            className="border-2 border-white-20 sm:hidden"
           />
           <Avatar
             src={dev.avatarUrl}
             alt={displayName}
             size="lg"
-            className="border-2 border-border hidden sm:block"
+            className="border-2 border-white-20 hidden sm:block"
           />
         </div>
 
         {/* Name + Handle */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 sm:gap-2">
-            <h3 className="font-bold text-base sm:text-lg md:text-xl leading-tight text-dark lg:group-hover:text-accent transition-colors truncate">
+            <h3 className="font-bold text-base sm:text-lg md:text-xl leading-tight text-white lg:group-hover:text-white transition-colors truncate">
               {displayName}
             </h3>
             {dev.isKol && <KolBadge size="sm" showGlow={false} />}
           </div>
-          <p className="text-[10px] sm:text-xs md:text-sm font-mono text-text-muted truncate">
+          <p className="text-[10px] sm:text-xs md:text-sm font-mono text-white-40 truncate">
             {dev.twitterHandle ? `@${dev.twitterHandle}` : displayHandle}
           </p>
         </div>
@@ -123,7 +123,7 @@ export function TopThreeRowClient({ dev, position }: { dev: LeaderboardRowProps;
 
         {/* Score */}
         <div className="text-right shrink-0">
-          <div className={`text-2xl sm:text-3xl md:text-4xl font-stat ${scoreColor.textClass} ${getScoreGlowClass(dev.tier)}`}>
+          <div className={`text-2xl sm:text-3xl md:text-4xl font-mono font-bold ${scoreColor.textClass} ${getScoreGlowClass(dev.tier)}`}>
             {score}
           </div>
         </div>
@@ -148,14 +148,14 @@ export function LeaderboardRowClient({
   const displayHandle = dev.twitterHandle || (dev.primaryWallet ? `${dev.primaryWallet.slice(0, 8)}...` : 'unknown');
 
   const tierBorderColors: Record<string, string> = {
-    legend: 'border-l-score-legend',
-    elite: 'border-l-score-elite',
-    rising_star: 'border-l-score-rising',
-    proven: 'border-l-score-proven',
-    builder: 'border-l-score-builder',
-    verified: 'border-l-score-verified',
-    penalized: 'border-l-score-penalized',
-    unverified: 'border-l-transparent',
+    sovereign: 'border-l-score-legend',
+    cleared: 'border-l-score-elite',
+    operative: 'border-l-score-rising',
+    vetted: 'border-l-score-proven',
+    tracked: 'border-l-score-builder',
+    filed: 'border-l-score-verified',
+    flagged: 'border-l-score-penalized',
+    ghost: 'border-l-transparent',
   };
   const borderColor = tierBorderColors[dev.tier] || 'border-l-transparent';
 
@@ -172,11 +172,11 @@ export function LeaderboardRowClient({
     >
       <Link
         href={`/profile/${encodeURIComponent(profileIdentifier)}`}
-        className={`group relative grid grid-cols-12 gap-1.5 sm:gap-2 md:gap-3 px-3 sm:px-4 md:px-12 py-4 md:py-5 items-center transition-all cursor-pointer border-l-4 ${borderColor} bg-card mb-1 rounded-sm shadow-[0_1px_4px_rgba(0,0,0,0.06)] lg:hover:shadow-[0_4px_12px_rgba(0,0,0,0.1)] lg:hover:-translate-y-0.5 active:bg-card-hover`}
+        className={`group relative grid grid-cols-12 gap-1.5 sm:gap-2 md:gap-3 px-3 sm:px-4 md:px-12 py-4 md:py-5 items-center transition-all cursor-pointer border-l-4 ${borderColor} bg-black-2 mb-1 lg:hover:-translate-y-0.5 active:bg-white/5`}
       >
         {/* Rank */}
         <div className="col-span-2 md:col-span-1 flex items-center justify-center">
-          <span className="font-display-mock text-lg sm:text-xl md:text-2xl text-text-muted">
+          <span className="font-mono font-extrabold uppercase text-lg sm:text-xl md:text-2xl text-white-40">
             #{dev.rank}
           </span>
         </div>
@@ -188,26 +188,26 @@ export function LeaderboardRowClient({
               src={dev.avatarUrl}
               alt={displayName}
               size="sm"
-              className="border-2 border-border sm:hidden"
+              className="border-2 border-white-20 sm:hidden"
             />
             <Avatar
               src={dev.avatarUrl}
               alt={displayName}
               size="md"
-              className="border-2 border-border hidden sm:block"
+              className="border-2 border-white-20 hidden sm:block"
             />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="font-bold text-sm sm:text-base md:text-lg lg:text-xl leading-tight mb-0.5 text-dark lg:group-hover:text-accent transition-colors flex items-center gap-1.5 sm:gap-2">
+            <div className="font-bold text-sm sm:text-base md:text-lg lg:text-xl leading-tight mb-0.5 text-white lg:group-hover:text-white transition-colors flex items-center gap-1.5 sm:gap-2">
               <span className="truncate">{displayName}</span>
               {dev.isKol && <KolBadge size="sm" showGlow={false} />}
               <ExternalLink size={12} className="opacity-0 lg:group-hover:opacity-100 transition-opacity shrink-0 hidden sm:block sm:w-3.5 sm:h-3.5" />
             </div>
-            <div className="text-[10px] sm:text-xs font-mono text-text-muted/60 truncate">
+            <div className="text-[10px] sm:text-xs font-mono text-white-40 truncate">
               {dev.twitterHandle ? `@${dev.twitterHandle}` : displayHandle}
             </div>
             {/* Tier Badge - Inline with name on desktop */}
-            {dev.tier !== 'unverified' && (
+            {dev.tier !== 'ghost' && (
               <div className="hidden md:block mt-1">
                 <TierBadge
                   tier={dev.tier}
@@ -222,19 +222,19 @@ export function LeaderboardRowClient({
 
         {/* Score Progress Bar - Desktop (wider) */}
         <div className="hidden md:flex col-span-4 items-center gap-3">
-          <div className="flex-1 h-2.5 bg-surface rounded-full overflow-hidden border border-border">
+          <div className="flex-1 h-2.5 bg-black-1 rounded-full overflow-hidden border border-white-20">
             <div
               className={`h-full ${getProgressBarClass(dev.tier) || scoreColor.bgClass} transition-all duration-500`}
               style={{ width: `${scorePercent}%` }}
             />
           </div>
-          <span className="text-xs font-mono text-text-muted w-10 text-right">{Math.round(scorePercent)}%</span>
+          <span className="text-xs font-mono text-white-40 w-10 text-right">{Math.round(scorePercent)}%</span>
         </div>
 
         {/* Score + Mobile tier */}
         <div className="col-span-12 md:col-span-2 flex items-center justify-between md:justify-end mt-2 md:mt-0 pl-10 sm:pl-12 md:pl-0">
           <div className="flex md:hidden items-center gap-2">
-            {dev.tier !== 'unverified' && (
+            {dev.tier !== 'ghost' && (
               <TierBadge
                 tier={dev.tier}
                 tierName={dev.tierName}
@@ -244,7 +244,7 @@ export function LeaderboardRowClient({
             )}
           </div>
           <div className="flex flex-col items-end">
-            <span className={`text-xl sm:text-2xl md:text-3xl font-stat ${scoreColor.textClass} ${getScoreGlowClass(dev.tier)}`}>
+            <span className={`text-xl sm:text-2xl md:text-3xl font-mono font-bold ${scoreColor.textClass} ${getScoreGlowClass(dev.tier)}`}>
               {dev.score}
             </span>
           </div>
@@ -252,7 +252,7 @@ export function LeaderboardRowClient({
 
         {/* Mobile Progress Bar */}
         <div className="col-span-12 md:hidden pl-10 sm:pl-12 mt-1">
-          <div className="h-1.5 sm:h-2 bg-surface rounded-full overflow-hidden border border-border">
+          <div className="h-1.5 sm:h-2 bg-black-1 rounded-full overflow-hidden border border-white-20">
             <div
               className={`h-full ${getProgressBarClass(dev.tier) || scoreColor.bgClass}`}
               style={{ width: `${scorePercent}%` }}

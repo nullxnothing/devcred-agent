@@ -30,7 +30,7 @@ export function CopyButton({ text, label, truncate = true, className = '' }: Cop
   return (
     <button
       onClick={handleCopy}
-      className={`inline-flex items-center gap-2 font-mono text-xs tracking-wide uppercase px-2 py-1 border-2 border-transparent hover:border-dark hover:bg-dark hover:text-cream transition-all duration-150 cursor-pointer group ${className}`}
+      className={`inline-flex items-center gap-2 font-mono text-xs tracking-wide uppercase px-2 py-1 border-2 border-transparent hover:border-white hover:bg-white hover:text-black transition-all duration-150 cursor-pointer group ${className}`}
       title={`Click to copy: ${text}`}
     >
       <span>{displayText}</span>
@@ -70,7 +70,7 @@ export function AddressDisplay({ address, showFull = false, showCopy = true, cla
   return (
     <button
       onClick={handleCopy}
-      className={`inline-flex items-center gap-2 font-mono text-xs tracking-wide px-2 py-1 border-2 border-transparent hover:border-dark hover:bg-dark hover:text-cream transition-all duration-150 cursor-pointer group ${className}`}
+      className={`inline-flex items-center gap-2 font-mono text-xs tracking-wide px-2 py-1 border-2 border-transparent hover:border-white hover:bg-white hover:text-black transition-all duration-150 cursor-pointer group ${className}`}
       title={`Click to copy: ${address}`}
     >
       <span>{displayAddress}</span>

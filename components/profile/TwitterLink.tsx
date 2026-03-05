@@ -93,8 +93,8 @@ export function TwitterLink({
   // Already linked state
   if (currentTwitterHandle) {
     return (
-      <div className="border-2 border-dark/30 bg-card p-4">
-        <h3 className="font-bold text-sm uppercase tracking-wider mb-3 flex items-center gap-2 text-dark">
+      <div className="border-2 border-white/20 bg-black-2 p-4">
+        <h3 className="font-bold text-sm uppercase tracking-wider mb-3 flex items-center gap-2 text-white">
           <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current">
             <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
           </svg>
@@ -121,7 +121,7 @@ export function TwitterLink({
               <img
                 src={currentAvatarUrl}
                 alt=""
-                className="w-10 h-10 rounded-full border-2 border-dark/10"
+                className="w-10 h-10 rounded-full border-2 border-white/10"
               />
             )}
             <div>
@@ -129,7 +129,7 @@ export function TwitterLink({
                 href={`https://x.com/${currentTwitterHandle}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="font-bold text-dark hover:text-accent transition-colors"
+                className="font-bold text-white hover:text-white transition-colors"
               >
                 @{currentTwitterHandle}
               </a>
@@ -161,8 +161,8 @@ export function TwitterLink({
 
   // Not linked state
   return (
-    <div className="border-2 border-dark/30 bg-card p-4">
-      <h3 className="font-bold text-sm uppercase tracking-wider mb-3 flex items-center gap-2 text-dark">
+    <div className="border-2 border-white/20 bg-black-2 p-4">
+      <h3 className="font-bold text-sm uppercase tracking-wider mb-3 flex items-center gap-2 text-white">
         <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current">
           <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
         </svg>
@@ -176,14 +176,14 @@ export function TwitterLink({
         </div>
       )}
 
-      <p className="text-dark/60 text-sm mb-4">
+      <p className="text-white-60 text-sm mb-4">
         Link your X account to display your profile picture and handle in the extension.
       </p>
 
       <button
         onClick={handleLinkTwitter}
         disabled={loading}
-        className="w-full h-10 bg-dark text-cream font-bold uppercase text-xs tracking-wider hover:bg-dark/90 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+        className="w-full h-10 bg-white text-black font-bold uppercase text-xs tracking-wider hover:bg-white/90 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
       >
         {loading ? (
           <Loader2 size={16} className="animate-spin" />

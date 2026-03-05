@@ -1,14 +1,16 @@
 /**
  * DELETE /api/wallets/[address] - Remove a linked wallet by address
+ * GET /api/wallets/[address] - Get wallet info
  *
  * Supports wallet-first auth (dk_session cookie)
  * Cannot delete primary wallet
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getSessionFromCookie } from '@/lib/wallet-auth';
 import { getWalletByAddress, deleteWalletByAddress, getUserById } from '@/lib/db';
 import { isValidSolanaAddress } from '@/lib/validation/solana';
+import { apiOk, apiBadRequest, apiNotFound, apiForbidden, apiError, withCache } from '@/lib/api-response';
+import { requireWalletAuth } from '@/lib/api-auth';
 
 interface RouteParams {
   params: Promise<{ address: string }>;
@@ -19,78 +21,51 @@ export async function DELETE(
   { params }: RouteParams
 ): Promise<NextResponse> {
   try {
-    const session = await getSessionFromCookie();
-
-    if (!session?.userId) {
-      return NextResponse.json(
-        { error: 'Not authenticated' },
-        { status: 401 }
-      );
-    }
+    // Require wallet auth
+    const auth = await requireWalletAuth();
+    if (auth.error) return auth.error;
 
     const { address } = await params;
 
     if (!address || !isValidSolanaAddress(address)) {
-      return NextResponse.json(
-        { error: 'Invalid wallet address' },
-        { status: 400 }
-      );
+      return apiBadRequest('Invalid wallet address');
     }
 
     // Check if wallet exists and belongs to user
     const wallet = await getWalletByAddress(address);
 
     if (!wallet) {
-      return NextResponse.json(
-        { error: 'Wallet not found' },
-        { status: 404 }
-      );
+      return apiNotFound('Wallet', address);
     }
 
-    if (wallet.user_id !== session.userId) {
-      return NextResponse.json(
-        { error: 'Wallet not owned by this user' },
-        { status: 403 }
-      );
+    if (wallet.user_id !== auth.session.userId) {
+      return apiForbidden('Wallet not owned by this user');
     }
 
     // Cannot delete primary wallet
     if (wallet.is_primary) {
-      return NextResponse.json(
-        { error: 'Cannot delete primary wallet. Set another wallet as primary first.' },
-        { status: 400 }
-      );
+      return apiBadRequest('Cannot delete primary wallet. Set another wallet as primary first.');
     }
 
     // Check if this is the user's primary_wallet in dk_users
-    const user = await getUserById(session.userId);
+    const user = await getUserById(auth.session.userId);
     if (user?.primary_wallet === address) {
-      return NextResponse.json(
-        { error: 'Cannot delete primary wallet. Set another wallet as primary first.' },
-        { status: 400 }
-      );
+      return apiBadRequest('Cannot delete primary wallet. Set another wallet as primary first.');
     }
 
-    const deleted = await deleteWalletByAddress(address, session.userId);
+    const deleted = await deleteWalletByAddress(address, auth.session.userId);
 
     if (!deleted) {
-      return NextResponse.json(
-        { error: 'Failed to delete wallet' },
-        { status: 500 }
-      );
+      return apiError(new Error('Failed to delete wallet'));
     }
 
-    return NextResponse.json({ success: true });
+    return apiOk({ success: true });
   } catch (error) {
     console.error('Error deleting wallet:', error);
-    return NextResponse.json(
-      { error: 'Failed to delete wallet' },
-      { status: 500 }
-    );
+    return apiError(error);
   }
 }
 
-// GET /api/wallets/[address] - Get wallet info
 export async function GET(
   request: NextRequest,
   { params }: RouteParams
@@ -99,33 +74,27 @@ export async function GET(
     const { address } = await params;
 
     if (!address || !isValidSolanaAddress(address)) {
-      return NextResponse.json(
-        { error: 'Invalid wallet address' },
-        { status: 400 }
-      );
+      return apiBadRequest('Invalid wallet address');
     }
 
     const wallet = await getWalletByAddress(address);
 
     if (!wallet) {
-      return NextResponse.json(
-        { error: 'Wallet not found' },
-        { status: 404 }
-      );
+      return apiNotFound('Wallet', address);
     }
 
-    // Return limited info (don't expose user_id)
-    return NextResponse.json({
-      address: wallet.address,
-      label: wallet.label,
-      is_primary: wallet.is_primary,
-      verified_at: wallet.verified_at,
-    });
+    // Cache wallet info for 60 seconds
+    return withCache(
+      apiOk({
+        address: wallet.address,
+        label: wallet.label,
+        is_primary: wallet.is_primary,
+        verified_at: wallet.verified_at,
+      }),
+      60
+    );
   } catch (error) {
     console.error('Error fetching wallet:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch wallet' },
-      { status: 500 }
-    );
+    return apiError(error);
   }
 }

@@ -49,11 +49,43 @@ export async function setNoncePublic(walletAddress: string, nonce: string): Prom
 }
 
 /**
- * Get a nonce from the database
+ * Get a nonce from the database (read-only, checks expiry)
  */
 export async function getNonce(walletAddress: string): Promise<NonceData | undefined> {
   const result = await pool.query(
     `SELECT nonce, user_id, expires_at FROM dk_wallet_nonces WHERE wallet_address = $1`,
+    [walletAddress]
+  );
+
+  if (result.rows.length === 0) {
+    return undefined;
+  }
+
+  const row = result.rows[0];
+  const expiresAt = new Date(row.expires_at).getTime();
+
+  // Reject expired nonces internally
+  if (Date.now() > expiresAt) {
+    await pool.query(`DELETE FROM dk_wallet_nonces WHERE wallet_address = $1`, [walletAddress]);
+    return undefined;
+  }
+
+  return {
+    nonce: row.nonce,
+    userId: row.user_id,
+    expiresAt,
+  };
+}
+
+/**
+ * Atomically consume a nonce: delete and return in one query.
+ * Prevents race conditions where two requests reuse the same nonce.
+ */
+export async function consumeNonce(walletAddress: string): Promise<NonceData | undefined> {
+  const result = await pool.query(
+    `DELETE FROM dk_wallet_nonces
+     WHERE wallet_address = $1 AND expires_at > NOW()
+     RETURNING nonce, user_id, expires_at`,
     [walletAddress]
   );
 
@@ -93,7 +125,7 @@ export async function cleanupExpiredNonces(): Promise<number> {
  * Create the sign message for wallet verification
  */
 export function createSignMessage(walletAddress: string, nonce: string): string {
-  return `DevCred Wallet Verification
+  return `Blacklist Wallet Verification
 
 Sign this message to verify you own this wallet.
 

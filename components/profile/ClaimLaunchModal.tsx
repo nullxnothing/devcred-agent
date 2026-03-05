@@ -96,16 +96,16 @@ export function ClaimLaunchModal({ isOpen, onClose, onClaimed }: ClaimLaunchModa
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div
-        className="absolute inset-0 bg-dark/80 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/80 backdrop-blur-sm"
         onClick={handleClose}
       />
 
-      <div className="relative w-full max-w-lg bg-card border-2 border-border shadow-[8px_8px_0px_0px_var(--border)]">
-        <div className="flex items-center justify-between p-6 border-b-2 border-dark/30">
-          <h2 className="text-2xl font-black font-display-mock text-dark">Claim Token Launch</h2>
+      <div className="relative w-full max-w-lg bg-black-2 border-2 border-white-20">
+        <div className="flex items-center justify-between p-6 border-b-2 border-white/20">
+          <h2 className="text-2xl font-black font-mono font-extrabold uppercase text-white">Claim Token Launch</h2>
           <button
             onClick={handleClose}
-            className="p-2 hover:bg-accent/10 transition-colors text-dark"
+            className="p-2 hover:bg-white/10 transition-colors text-white"
           >
             <X size={24} />
           </button>
@@ -115,20 +115,20 @@ export function ClaimLaunchModal({ isOpen, onClose, onClaimed }: ClaimLaunchModa
           {status === 'success' ? (
             <div className="text-center py-8">
               <CheckCircle size={64} className="mx-auto text-success mb-4" />
-              <h3 className="text-xl font-bold mb-2 text-dark">Token Claimed!</h3>
-              <p className="text-dark/60">
+              <h3 className="text-xl font-bold mb-2 text-white">Token Claimed!</h3>
+              <p className="text-white-60">
                 {tokenInfo?.name} has been added to your profile.
               </p>
             </div>
           ) : (
             <>
-              <p className="text-dark/70 mb-6">
+              <p className="text-white-60 mb-6">
                 Enter the mint address of a token you created to claim it on your profile.
                 You must have the creator wallet connected to verify ownership.
               </p>
 
               <div className="mb-6">
-                <label className="block text-xs font-bold uppercase tracking-wider mb-2 text-dark">
+                <label className="block text-xs font-bold uppercase tracking-wider mb-2 text-white">
                   Token Mint Address
                 </label>
                 <div className="flex gap-2">
@@ -137,7 +137,7 @@ export function ClaimLaunchModal({ isOpen, onClose, onClaimed }: ClaimLaunchModa
                     value={mintAddress}
                     onChange={(e) => setMintAddress(e.target.value)}
                     placeholder="Enter mint address..."
-                    className="flex-1 px-4 py-3 border-2 border-dark/30 bg-cream font-mono text-sm text-dark placeholder:text-dark/40 focus:outline-none focus:border-accent"
+                    className="flex-1 px-4 py-3 border-2 border-white/20 bg-black font-mono text-sm text-white placeholder:text-white/40 focus:outline-none focus:border-white"
                     disabled={status === 'searching' || status === 'claiming'}
                   />
                   <Button
@@ -163,17 +163,17 @@ export function ClaimLaunchModal({ isOpen, onClose, onClaimed }: ClaimLaunchModa
               )}
 
               {tokenInfo && status === 'found' && (
-                <div className="mb-6 p-4 bg-cream border-2 border-dark/30">
+                <div className="mb-6 p-4 bg-black border-2 border-white/20">
                   <div className="flex items-center gap-4 mb-4">
-                    <div className="w-12 h-12 bg-accent/20 border-2 border-accent/30 flex items-center justify-center font-bold text-dark">
+                    <div className="w-12 h-12 bg-white/20 border-2 border-white/30 flex items-center justify-center font-bold text-white">
                       {tokenInfo.symbol.slice(0, 2).toUpperCase()}
                     </div>
                     <div>
-                      <h3 className="font-bold text-lg text-dark">{tokenInfo.name}</h3>
-                      <p className="font-mono text-sm text-dark/60">${tokenInfo.symbol}</p>
+                      <h3 className="font-bold text-lg text-white">{tokenInfo.name}</h3>
+                      <p className="font-mono text-sm text-white-60">${tokenInfo.symbol}</p>
                     </div>
                   </div>
-                  <div className="text-xs font-mono text-dark/50 break-all">
+                  <div className="text-xs font-mono text-white/50 break-all">
                     Creator: {tokenInfo.creatorWallet}
                   </div>
                 </div>
@@ -190,7 +190,7 @@ export function ClaimLaunchModal({ isOpen, onClose, onClaimed }: ClaimLaunchModa
                 {tokenInfo && (status === 'found' || status === 'claiming') && (
                   <Button
                     onClick={handleClaim}
-                    variant="accent"
+                    variant="primary"
                     className="flex-1"
                     disabled={status === 'claiming'}
                   >

@@ -1,6 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { NextRequest } from 'next/server';
 import {
   getUserById,
   getWalletsByUserId,
@@ -11,37 +9,33 @@ import {
 } from '@/lib/db';
 import { scanWalletQuick } from '@/lib/wallet-scan';
 import { calculateDevScore } from '@/lib/scoring';
-import { checkRateLimit, getRateLimitIdentifier, rateLimitHeaders, RATE_LIMIT_CONFIGS } from '@/lib/api-rate-limiter';
+import { checkRateLimit, getRateLimitIdentifier, RATE_LIMIT_CONFIGS } from '@/lib/api-rate-limiter';
+import { apiOk, apiRateLimited, apiNotFound, apiError, withCache } from '@/lib/api-response';
+import { requireNextAuth } from '@/lib/api-auth';
 
-export async function POST(request: NextRequest) {
+export async function POST(_request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    // Require authentication
+    const auth = await requireNextAuth();
+    if (auth.error) return auth.error;
 
     // Rate limiting - sync is expensive (calls Helius API)
-    const rateLimitId = getRateLimitIdentifier('user-sync', session.user.id);
+    const rateLimitId = getRateLimitIdentifier('user-sync', auth.user.id);
     const rateLimit = checkRateLimit(rateLimitId, RATE_LIMIT_CONFIGS.userSync);
     if (!rateLimit.allowed) {
-      return NextResponse.json(
-        { error: 'Sync limit reached. Please wait before syncing again.' },
-        { status: 429, headers: rateLimitHeaders(rateLimit) }
-      );
+      return apiRateLimited(rateLimit, 'Sync limit reached. Please wait before syncing again.');
     }
 
-    const userId = session.user.id;
-    const user = await getUserById(userId);
+    const user = await getUserById(auth.user.id);
 
     if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      return apiNotFound('User');
     }
 
-    const wallets = await getWalletsByUserId(userId);
+    const wallets = await getWalletsByUserId(auth.user.id);
 
     if (wallets.length === 0) {
-      return NextResponse.json({
+      return apiOk({
         message: 'No wallets linked',
         tokensFound: 0,
         score: 0,
@@ -54,10 +48,8 @@ export async function POST(request: NextRequest) {
     // Scan all wallets using optimized batch API calls
     for (const wallet of wallets) {
       try {
-        // Use NEW optimized wallet scan (batched API calls)
         const scanResult = await scanWalletQuick(wallet.address);
 
-        // Save each token to database
         for (const token of scanResult.tokensCreated) {
           totalTokensFound++;
 
@@ -66,7 +58,7 @@ export async function POST(request: NextRequest) {
             name: token.name || 'Unknown',
             symbol: token.symbol || 'UNK',
             creator_wallet: wallet.address,
-            user_id: userId,
+            user_id: auth.user.id,
             launch_date: new Date(token.launchedAt * 1000).toISOString(),
             migrated: token.migrated,
             migrated_at: token.migrated ? new Date().toISOString() : null,
@@ -101,15 +93,15 @@ export async function POST(request: NextRequest) {
     });
 
     // Update user score
-    await updateUser(userId, {
+    await updateUser(auth.user.id, {
       total_score: devScore.score,
       is_verified: wallets.length > 0,
     });
 
     // Record score history
-    await addScoreHistory(userId, devScore.score, devScore.breakdown);
+    await addScoreHistory(auth.user.id, devScore.score, devScore.breakdown);
 
-    return NextResponse.json({
+    return apiOk({
       message: 'Sync complete',
       tokensFound: totalTokensFound,
       score: devScore.score,
@@ -118,29 +110,31 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error syncing user:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return apiError(error);
   }
 }
 
 // GET method to check sync status
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
+    // Require authentication
+    const auth = await requireNextAuth();
+    if (auth.error) return auth.error;
 
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const user = await getUserById(auth.user.id);
+    const tokens = await getTokensForUserWallets(auth.user.id);
 
-    const user = await getUserById(session.user.id);
-    const tokens = await getTokensForUserWallets(session.user.id);
-
-    return NextResponse.json({
-      lastSync: user?.updated_at,
-      tokenCount: tokens.length,
-      score: user?.total_score || 0,
-    });
+    // Cache sync status for 30 seconds
+    return withCache(
+      apiOk({
+        lastSync: user?.updated_at,
+        tokenCount: tokens.length,
+        score: user?.total_score || 0,
+      }),
+      30
+    );
   } catch (error) {
     console.error('Error checking sync status:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return apiError(error);
   }
 }

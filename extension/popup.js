@@ -1,4 +1,4 @@
-// DevKarma Popup Script
+// Blacklist Popup Script
 
 const API_BASE = 'https://devkarmaagent-production.up.railway.app';
 
@@ -32,13 +32,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
       if (response.ok) {
         statusDot.classList.remove('offline');
-        statusText.textContent = 'Connected';
+        statusText.textContent = 'ONLINE';
       } else {
         throw new Error('API error');
       }
     } catch (e) {
       statusDot.classList.add('offline');
-      statusText.textContent = 'Offline';
+      statusText.textContent = 'OFFLINE';
     }
   }
 

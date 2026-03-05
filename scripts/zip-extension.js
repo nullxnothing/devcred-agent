@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
-const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
+const archiver = require('archiver');
 
 const extensionDir = path.join(__dirname, '..', 'extension');
 const outputPath = path.join(__dirname, '..', 'public', 'devkarma-extension.zip');
@@ -12,22 +12,30 @@ if (!fs.existsSync(extensionDir)) {
   process.exit(0);
 }
 
+// Ensure public directory exists
+const publicDir = path.dirname(outputPath);
+if (!fs.existsSync(publicDir)) {
+  fs.mkdirSync(publicDir, { recursive: true });
+}
+
 // Remove old zip if exists
 if (fs.existsSync(outputPath)) {
   fs.unlinkSync(outputPath);
 }
 
-// Create zip based on platform
-const isWindows = process.platform === 'win32';
+// Create zip using archiver (cross-platform, no system dependencies)
+const output = fs.createWriteStream(outputPath);
+const archive = archiver('zip', { zlib: { level: 9 } });
 
-try {
-  if (isWindows) {
-    execSync(`powershell -Command "Compress-Archive -Path '${extensionDir}\\*' -DestinationPath '${outputPath}' -Force"`, { stdio: 'inherit' });
-  } else {
-    execSync(`cd "${extensionDir}" && zip -r "${outputPath}" .`, { stdio: 'inherit' });
-  }
-  console.log('✓ Extension zip created: public/devkarma-extension.zip');
-} catch (error) {
-  console.error('Failed to create extension zip:', error.message);
+output.on('close', () => {
+  console.log(`✓ Extension zip created: public/devkarma-extension.zip (${archive.pointer()} bytes)`);
+});
+
+archive.on('error', (err) => {
+  console.error('Failed to create extension zip:', err.message);
   process.exit(1);
-}
+});
+
+archive.pipe(output);
+archive.directory(extensionDir, false);
+archive.finalize();

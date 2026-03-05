@@ -144,7 +144,7 @@ export function ProfileHoverCard({
       {isVisible && (
         <div 
           ref={cardRef}
-          className="absolute z-[100] w-80 bg-card border-2 border-border rounded-xl shadow-2xl overflow-hidden"
+          className="absolute z-[100] w-80 bg-black-2 border-2 border-white-20 shadow-2xl overflow-hidden"
           style={cardStyle}
           onMouseEnter={() => {
             if (leaveTimeoutRef.current) {
@@ -155,22 +155,22 @@ export function ProfileHoverCard({
           onMouseLeave={handleMouseLeave}
         >
           {/* Decorative top bar */}
-          <div className="h-1 bg-gradient-to-r from-accent via-amber-400 to-accent" />
+          <div className="h-1 bg-gradient-to-r from-white via-white/40 to-white" />
           
           {/* Header */}
-          <div className="p-4 border-b border-border">
+          <div className="p-4 border-b border-white-20">
             <div className="flex items-start gap-3">
               <Avatar
                 src={avatarUrl}
                 alt={displayName}
                 size="lg"
-                className="border-2 border-accent/50 shrink-0"
+                className="border-2 border-white/50 shrink-0"
               />
               <div className="flex-1 min-w-0">
-                <h3 className="font-bold text-dark text-lg leading-tight truncate">
+                <h3 className="font-bold text-white text-lg leading-tight truncate">
                   {displayName}
                 </h3>
-                <p className="text-text-muted text-sm font-mono truncate">
+                <p className="text-white-40 text-sm font-mono truncate">
                   {displayHandle}
                 </p>
                 <div className="mt-2">
@@ -186,21 +186,21 @@ export function ProfileHoverCard({
           </div>
 
           {/* Score + Rank */}
-          <div className="px-4 py-3 bg-cream flex items-center justify-between border-b border-border">
+          <div className="px-4 py-3 bg-black flex items-center justify-between border-b border-white-20">
             <div>
-              <div className="text-[10px] uppercase tracking-wider text-text-muted mb-0.5">
-                DevCred Score
+              <div className="text-[10px] uppercase tracking-wider text-white-40 mb-0.5">
+                Blacklist Score
               </div>
-              <div className={`text-3xl font-stat ${scoreColor.textClass}`}>
+              <div className={`text-3xl font-mono font-bold ${scoreColor.textClass}`}>
                 {score}
               </div>
             </div>
             {rank && (
               <div className="text-right">
-                <div className="text-[10px] uppercase tracking-wider text-text-muted mb-0.5">
+                <div className="text-[10px] uppercase tracking-wider text-white-40 mb-0.5">
                   Rank
                 </div>
-                <div className="text-3xl font-stat text-dark">
+                <div className="text-3xl font-mono font-bold text-white">
                   #{rank}
                 </div>
               </div>
@@ -210,14 +210,14 @@ export function ProfileHoverCard({
           {/* Badges Section */}
           <div className="px-4 py-3">
             <div className="flex items-center gap-2 mb-3">
-              <Award size={14} className="text-accent" />
-              <span className="text-[10px] uppercase tracking-wider text-text-muted font-bold">
+              <Award size={14} className="text-white" />
+              <span className="text-[10px] uppercase tracking-wider text-white-40 font-bold">
                 Achievements
               </span>
             </div>
             {isLoading ? (
               <div className="flex items-center justify-center py-6">
-                <Loader2 size={24} className="animate-spin text-accent" />
+                <Loader2 size={24} className="animate-spin text-white" />
               </div>
             ) : badges.length > 0 ? (
               <div className="flex flex-wrap gap-2">
@@ -231,7 +231,7 @@ export function ProfileHoverCard({
                 ))}
               </div>
             ) : (
-              <p className="text-text-muted text-sm italic py-4 text-center">
+              <p className="text-white-40 text-sm italic py-4 text-center">
                 No achievements earned yet
               </p>
             )}
@@ -240,7 +240,7 @@ export function ProfileHoverCard({
           {/* View Profile Link */}
           <Link
             href={`/profile/${encodeURIComponent(profileIdentifier)}`}
-            className="flex items-center justify-center gap-2 px-4 py-3 bg-cream hover:bg-accent/10 border-t border-border text-text-muted hover:text-accent text-sm font-bold uppercase tracking-wide transition-colors"
+            className="flex items-center justify-center gap-2 px-4 py-3 bg-black hover:bg-white/10 border-t border-white-20 text-white-40 hover:text-white text-sm font-bold uppercase tracking-wide transition-colors"
           >
             View Full Profile
             <ExternalLink size={14} />

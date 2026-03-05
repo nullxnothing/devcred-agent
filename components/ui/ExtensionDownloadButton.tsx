@@ -10,8 +10,8 @@ export function ExtensionDownloadButton() {
   const handleDownload = () => {
     // Create a temporary link to trigger download
     const link = document.createElement('a');
-    link.href = '/devkarma-extension.zip';
-    link.download = 'devkarma-extension.zip';
+    link.href = '/blacklist-extension.zip';
+    link.download = 'blacklist-extension.zip';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -23,7 +23,7 @@ export function ExtensionDownloadButton() {
   };
 
   return (
-    <Button variant="accent" className="gap-2" onClick={handleDownload}>
+    <Button variant="primary" className="gap-2" onClick={handleDownload}>
       <Chrome size={18} />
       Download Extension
     </Button>

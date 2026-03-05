@@ -3,73 +3,78 @@
 <head>
   <meta charset="UTF-8">
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
+
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
     body {
       width: 280px;
       padding: 16px;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-      background: #0d0d14;
-      color: rgba(255,255,255,0.9);
+      font-family: 'JetBrains Mono', monospace;
+      background: #000000;
+      color: #ffffff;
     }
 
     .header {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
       margin-bottom: 16px;
       padding-bottom: 12px;
-      border-bottom: 1px solid rgba(255,255,255,0.1);
+      border-bottom: 1px solid #333333;
     }
 
-    .logo { width: 32px; height: 32px; border-radius: 6px; }
-    .title { font-size: 18px; font-weight: 700; letter-spacing: -0.5px; }
+    .title {
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+    .bracket { color: #666666; }
     .version {
-      font-size: 10px;
-      color: rgba(255,255,255,0.4);
+      font-size: 9px;
+      color: #666666;
       margin-left: auto;
       padding: 2px 6px;
-      background: rgba(255,255,255,0.06);
-      border-radius: 4px;
+      border: 1px solid #333333;
     }
 
     .stats {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 10px;
+      gap: 8px;
       margin-bottom: 16px;
     }
 
     .stat {
-      background: rgba(255,255,255,0.03);
-      border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 8px;
+      background: #111111;
+      border: 1px solid #333333;
       padding: 12px;
       text-align: center;
     }
 
     .stat-value {
-      font-size: 24px;
+      font-size: 22px;
       font-weight: 700;
       font-variant-numeric: tabular-nums;
+      color: #ffffff;
     }
-    .stat-value.green { color: #22c55e; }
-    .stat-value.red { color: #ef4444; }
+    .stat-value.flagged { color: #ff0000; }
 
     .stat-label {
-      font-size: 10px;
-      color: rgba(255,255,255,0.4);
+      font-size: 9px;
+      color: #666666;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.1em;
       margin-top: 4px;
     }
 
     .section-title {
-      font-size: 10px;
+      font-size: 9px;
       font-weight: 700;
-      color: rgba(255,255,255,0.4);
+      color: #666666;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.1em;
       margin-bottom: 8px;
       margin-top: 16px;
     }
@@ -78,20 +83,19 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 10px 12px;
-      background: rgba(255,255,255,0.03);
-      border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 6px;
-      margin-bottom: 8px;
+      padding: 8px 10px;
+      background: #0a0a0a;
+      border: 1px solid #333333;
+      margin-bottom: 6px;
     }
 
-    .toggle-label { font-size: 13px; font-weight: 500; }
-    .toggle-desc { font-size: 10px; color: rgba(255,255,255,0.4); margin-top: 2px; }
+    .toggle-label { font-size: 11px; font-weight: 700; }
+    .toggle-desc { font-size: 9px; color: #666666; margin-top: 2px; }
 
     .toggle {
       position: relative;
-      width: 40px;
-      height: 22px;
+      width: 36px;
+      height: 18px;
       flex-shrink: 0;
     }
 
@@ -101,126 +105,125 @@
       position: absolute;
       cursor: pointer;
       inset: 0;
-      background: rgba(255,255,255,0.15);
-      border-radius: 11px;
+      background: #333333;
       transition: 0.2s;
     }
 
     .toggle-slider:before {
       position: absolute;
       content: "";
-      height: 16px;
-      width: 16px;
+      height: 12px;
+      width: 12px;
       left: 3px;
       bottom: 3px;
-      background: rgba(255,255,255,0.6);
-      border-radius: 50%;
+      background: #666666;
       transition: 0.2s;
     }
 
-    .toggle input:checked + .toggle-slider { background: #22c55e; }
+    .toggle input:checked + .toggle-slider { background: #ffffff; }
     .toggle input:checked + .toggle-slider:before {
       transform: translateX(18px);
-      background: white;
+      background: #000000;
     }
 
     .legend {
       margin-top: 16px;
       padding-top: 12px;
-      border-top: 1px solid rgba(255,255,255,0.1);
+      border-top: 1px solid #333333;
     }
 
     .legend-title {
-      font-size: 10px;
+      font-size: 9px;
       font-weight: 700;
-      color: rgba(255,255,255,0.4);
+      color: #666666;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.1em;
       margin-bottom: 10px;
     }
 
     .legend-item {
       display: flex;
       align-items: center;
-      gap: 10px;
-      font-size: 12px;
-      margin-bottom: 8px;
-      color: rgba(255,255,255,0.7);
+      gap: 8px;
+      font-size: 10px;
+      margin-bottom: 6px;
+      color: #999999;
     }
 
-    .legend-light {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
+    .legend-indicator {
+      width: 8px;
+      height: 8px;
       flex-shrink: 0;
+      border: 1px solid;
     }
 
-    .green { background: #22c55e; }
-    .yellow { background: #eab308; }
-    .orange { background: #f97316; }
-    .red { background: #ef4444; }
+    .ind-sovereign { border-color: #ffffff; background: #ffffff; }
+    .ind-cleared { border-color: #e5e5e5; background: transparent; }
+    .ind-tracked { border-color: #999999; background: transparent; border-style: dashed; }
+    .ind-filed { border-color: #737373; background: transparent; border-style: dotted; }
+    .ind-flagged { border-color: #ff0000; background: #ff0000; }
 
-    .legend-tier { font-weight: 500; }
-    .legend-score { color: rgba(255,255,255,0.4); margin-left: auto; font-size: 11px; }
+    .legend-tier { font-weight: 700; color: #e5e5e5; }
+    .legend-score { color: #666666; margin-left: auto; font-size: 9px; }
 
     .footer {
       margin-top: 16px;
       padding-top: 12px;
-      border-top: 1px solid rgba(255,255,255,0.1);
+      border-top: 1px solid #333333;
       display: flex;
       justify-content: space-between;
       align-items: center;
     }
 
     .footer a {
-      color: #22c55e;
+      color: #999999;
       text-decoration: none;
-      font-size: 12px;
-      font-weight: 600;
-      transition: opacity 0.15s;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      transition: color 0.15s;
     }
-    .footer a:hover { opacity: 0.7; }
+    .footer a:hover { color: #ffffff; }
 
     .status {
       display: flex;
       align-items: center;
       gap: 6px;
-      font-size: 11px;
-      color: rgba(255,255,255,0.5);
+      font-size: 9px;
+      color: #666666;
     }
 
     .status-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: #22c55e;
+      width: 6px;
+      height: 6px;
+      background: #ffffff;
     }
-    .status-dot.offline { background: #ef4444; }
+    .status-dot.offline { background: #ff0000; }
   </style>
 </head>
 <body>
   <div class="header">
-    <img src="icons/icon32.png" alt="DevKarma" class="logo">
-    <div class="title">DevKarma</div>
+    <div class="title"><span class="bracket">[</span>BLACKLIST<span class="bracket">]</span></div>
     <span class="version">v1.0</span>
   </div>
 
   <div class="stats">
     <div class="stat">
-      <div class="stat-value green" id="scanned">0</div>
-      <div class="stat-label">Scanned</div>
+      <div class="stat-value" id="scanned">0</div>
+      <div class="stat-label">SCANNED</div>
     </div>
     <div class="stat">
-      <div class="stat-value red" id="flagged">0</div>
-      <div class="stat-label">Flagged</div>
+      <div class="stat-value flagged" id="flagged">0</div>
+      <div class="stat-label">FLAGGED</div>
     </div>
   </div>
 
-  <div class="section-title">Display Options</div>
+  <div class="section-title">// DISPLAY OPTIONS</div>
 
   <div class="toggle-row">
     <div>
-      <div class="toggle-label">Full Card</div>
+      <div class="toggle-label">DOSSIER CARD</div>
       <div class="toggle-desc">Below DA section</div>
     </div>
     <label class="toggle">
@@ -231,7 +234,7 @@
 
   <div class="toggle-row">
     <div>
-      <div class="toggle-label">Mini Badge</div>
+      <div class="toggle-label">INLINE BADGE</div>
       <div class="toggle-desc">In header bar</div>
     </div>
     <label class="toggle">
@@ -242,7 +245,7 @@
 
   <div class="toggle-row">
     <div>
-      <div class="toggle-label">Auto-Scan</div>
+      <div class="toggle-label">AUTO-SCAN</div>
       <div class="toggle-desc">Watch for page changes</div>
     </div>
     <label class="toggle">
@@ -252,34 +255,34 @@
   </div>
 
   <div class="legend">
-    <div class="legend-title">Score Guide</div>
+    <div class="legend-title">// CLASSIFICATION GUIDE</div>
     <div class="legend-item">
-      <span class="legend-light green"></span>
-      <span class="legend-tier">Elite/Legend</span>
+      <span class="legend-indicator ind-sovereign"></span>
+      <span class="legend-tier">SOVEREIGN / CLEARED</span>
       <span class="legend-score">600+</span>
     </div>
     <div class="legend-item">
-      <span class="legend-light yellow"></span>
-      <span class="legend-tier">Builder/Proven</span>
+      <span class="legend-indicator ind-cleared"></span>
+      <span class="legend-tier">VETTED / TRACKED</span>
       <span class="legend-score">300-599</span>
     </div>
     <div class="legend-item">
-      <span class="legend-light orange"></span>
-      <span class="legend-tier">Verified</span>
+      <span class="legend-indicator ind-tracked"></span>
+      <span class="legend-tier">FILED</span>
       <span class="legend-score">150-299</span>
     </div>
     <div class="legend-item">
-      <span class="legend-light red"></span>
-      <span class="legend-tier">Risky/Penalized</span>
+      <span class="legend-indicator ind-flagged"></span>
+      <span class="legend-tier">FLAGGED</span>
       <span class="legend-score">&lt;150</span>
     </div>
   </div>
 
   <div class="footer">
-    <a href="https://devcred.fun" target="_blank">devcred.fun</a>
+    <a href="https://devkarma.fun" target="_blank">BLACKLIST.FUN</a>
     <div class="status">
       <span class="status-dot" id="statusDot"></span>
-      <span id="statusText">Connected</span>
+      <span id="statusText">ONLINE</span>
     </div>
   </div>
 

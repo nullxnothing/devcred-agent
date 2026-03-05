@@ -25,7 +25,7 @@ export async function heliusRpc<T>(method: string, params: Record<string, unknow
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         jsonrpc: '2.0',
-        id: 'devcred',
+        id: 'blacklist',
         method,
         params,
       }),
@@ -54,7 +54,7 @@ export async function heliusRpcArray<T>(method: string, params: unknown[]): Prom
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         jsonrpc: '2.0',
-        id: 'devcred',
+        id: 'blacklist',
         method,
         params,
       }),

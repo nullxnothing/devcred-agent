@@ -1,9 +1,8 @@
 /**
- * Badge System for DevKarma
- * 
- * Calculates achievement badges based on token performance metrics.
- * Badges are displayed on profile "calling cards" and can be hovered/tapped
- * to see token details.
+ * Badge System — Blacklist Classified Access Levels
+ *
+ * Achievement badges based on token performance metrics.
+ * Displayed as classified stamps on subject dossiers.
  */
 
 export type BadgeType = 
@@ -183,8 +182,8 @@ export const BADGE_DEFINITIONS: Record<BadgeType, {
 };
 
 /**
- * Tier styling configuration - DevKarma brand aligned
- * Uses sharp edges and brand-consistent colors
+ * Tier styling — Classified access levels (monochrome intensity)
+ * RESTRICTED → CONFIDENTIAL → SECRET → TOP SECRET → BLACK
  */
 export const TIER_STYLES: Record<BadgeTier, {
   bg: string;
@@ -193,53 +192,52 @@ export const TIER_STYLES: Record<BadgeTier, {
   textColor: string;
   labelColor: string;
   valueColor: string;
-  // Legacy gradient support
-  gradient: string;
+  classifiedLabel: string;
 }> = {
   bronze: {
-    bg: 'bg-amber-800',
-    border: 'border-amber-600',
-    shadow: 'shadow-[2px_2px_0px_0px_rgba(180,83,9,0.5)]',
-    textColor: 'text-amber-100',
-    labelColor: 'text-amber-700',
-    valueColor: 'text-amber-700',
-    gradient: 'from-amber-800 to-amber-700',
+    bg: 'bg-black-3',
+    border: 'border-white-20',
+    shadow: '',
+    textColor: 'text-white-60',
+    labelColor: 'text-white-40',
+    valueColor: 'text-white-40',
+    classifiedLabel: 'RESTRICTED',
   },
   silver: {
-    bg: 'bg-slate-500',
-    border: 'border-slate-400',
-    shadow: 'shadow-[2px_2px_0px_0px_rgba(100,116,139,0.5)]',
-    textColor: 'text-slate-100',
-    labelColor: 'text-slate-500',
-    valueColor: 'text-slate-600',
-    gradient: 'from-slate-500 to-slate-400',
+    bg: 'bg-black-2',
+    border: 'border-white-40',
+    shadow: '',
+    textColor: 'text-white-90',
+    labelColor: 'text-white-60',
+    valueColor: 'text-white-60',
+    classifiedLabel: 'CONFIDENTIAL',
   },
   gold: {
-    bg: 'bg-score-legend',
-    border: 'border-yellow-500',
-    shadow: 'shadow-[2px_2px_0px_0px_rgba(234,179,8,0.6)]',
-    textColor: 'text-yellow-950',
-    labelColor: 'text-yellow-600',
-    valueColor: 'text-yellow-600',
-    gradient: 'from-yellow-400 to-yellow-500',
+    bg: 'bg-black-2',
+    border: 'border-white-60',
+    shadow: '',
+    textColor: 'text-white',
+    labelColor: 'text-white-90',
+    valueColor: 'text-white-90',
+    classifiedLabel: 'SECRET',
   },
   platinum: {
-    bg: 'bg-emerald-600',
-    border: 'border-emerald-400',
-    shadow: 'shadow-[2px_2px_0px_0px_rgba(16,185,129,0.5)]',
-    textColor: 'text-emerald-50',
-    labelColor: 'text-emerald-600',
-    valueColor: 'text-emerald-600',
-    gradient: 'from-emerald-500 to-emerald-400',
+    bg: 'bg-black-1',
+    border: 'border-white-90',
+    shadow: 'terminal-glow',
+    textColor: 'text-white',
+    labelColor: 'text-white',
+    valueColor: 'text-white',
+    classifiedLabel: 'TOP SECRET',
   },
   diamond: {
-    bg: 'bg-score-elite',
-    border: 'border-purple-400',
-    shadow: 'shadow-[2px_2px_0px_0px_rgba(168,85,247,0.6)]',
-    textColor: 'text-purple-50',
-    labelColor: 'text-purple-500',
-    valueColor: 'text-purple-600',
-    gradient: 'from-purple-500 to-purple-400',
+    bg: 'bg-black',
+    border: 'border-white',
+    shadow: 'animate-sovereign-glow',
+    textColor: 'text-white',
+    labelColor: 'text-white',
+    valueColor: 'text-white',
+    classifiedLabel: 'BLACK',
   },
 };
 

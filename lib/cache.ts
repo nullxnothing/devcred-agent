@@ -1,5 +1,5 @@
 /**
- * Caching Layer for DevCred
+ * Caching Layer for Blacklist
  *
  * Multi-tier caching:
  * 1. In-memory cache for hot data (market prices, holder counts)

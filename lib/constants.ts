@@ -1,5 +1,5 @@
 /**
- * Centralized constants for DevCred
+ * Centralized constants for Blacklist
  * Eliminates magic numbers scattered across modules
  */
 
@@ -144,13 +144,14 @@ export const LONGEVITY_THRESHOLDS = {
 
 // ==================== TIER THRESHOLDS ====================
 export const TIER_THRESHOLDS = {
-  LEGEND: { minScore: 700, minMigrations: 5, minMonths: 6 },
-  ELITE: { minScore: 600, minMigrations: 3 },
-  PROVEN: { minScore: 450, minMigrations: 1 },
-  BUILDER: { minScore: 300, minTokens: 3 },
-  VERIFIED: { minScore: 150 },
-  PENALIZED: { maxScore: 150 },
-  UNVERIFIED: {},
+  SOVEREIGN: { minScore: 700, minMigrations: 5, minMonths: 6 },
+  CLEARED: { minScore: 600, minMigrations: 3 },
+  OPERATIVE: { minScore: 500, minMcap: 500_000 },
+  VETTED: { minScore: 450, minMigrations: 1 },
+  TRACKED: { minScore: 300, minTokens: 3 },
+  FILED: { minScore: 150 },
+  FLAGGED: { maxScore: 150 },
+  GHOST: {},
 } as const;
 
 // ==================== HELPER FUNCTIONS ====================

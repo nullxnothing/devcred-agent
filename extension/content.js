@@ -1,18 +1,17 @@
-// DevKarma Extension - Dual Mode Badge Injection
+// Blacklist Extension - Dual Mode Badge Injection
 // Mini badge in header (right side) + Full card replacing DA section
 
 const API_BASE = 'https://devkarmaagent-production.up.railway.app';
 const SITE_BASE = 'https://devkarma.fun';
 const CACHE_TTL = 5 * 60 * 1000;
-const MAX_CACHE_SIZE = 100; // Prevent memory leak
-const REQUEST_TIMEOUT = 10000; // 10 second timeout
+const MAX_CACHE_SIZE = 100;
+const REQUEST_TIMEOUT = 10000;
 
 // LRU-style cache with size limit
 const scoreCache = new Map();
 const injectedWallets = new Set();
 
 function cleanupCache() {
-  // Remove oldest entries if cache is too large
   if (scoreCache.size > MAX_CACHE_SIZE) {
     const entriesToDelete = scoreCache.size - MAX_CACHE_SIZE;
     const iterator = scoreCache.keys();
@@ -20,86 +19,12 @@ function cleanupCache() {
       scoreCache.delete(iterator.next().value);
     }
   }
-  // Clear injected wallets periodically to allow re-injection on navigation
   if (injectedWallets.size > MAX_CACHE_SIZE) {
     injectedWallets.clear();
   }
 }
 
 let settings = { showCard: true, showBadge: true, enabled: true };
-
-// ============ THEME DETECTION ============
-function getAxiomTheme() {
-  // Check body/html background color to detect theme
-  const bodyBg = getComputedStyle(document.body).backgroundColor;
-  const htmlBg = getComputedStyle(document.documentElement).backgroundColor;
-
-  // Parse RGB values
-  const parseRgb = (color) => {
-    const match = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
-    if (match) {
-      return { r: parseInt(match[1]), g: parseInt(match[2]), b: parseInt(match[3]) };
-    }
-    return null;
-  };
-
-  const bg = parseRgb(bodyBg) || parseRgb(htmlBg);
-  if (!bg) return 'dark'; // Default to dark
-
-  // Calculate luminance
-  const luminance = (0.299 * bg.r + 0.587 * bg.g + 0.114 * bg.b) / 255;
-
-  // Detect specific themes based on color
-  if (luminance > 0.7) return 'light';
-  if (bg.r < 20 && bg.g < 20 && bg.b < 30) return 'dark'; // Pure dark
-  if (bg.r < 30 && bg.g < 25 && bg.b < 40) return 'midnight'; // Bluish dark
-
-  return luminance > 0.5 ? 'light' : 'dark';
-}
-
-function getThemeColors() {
-  const theme = getAxiomTheme();
-  console.log('[DevKarma] Detected theme:', theme);
-
-  if (theme === 'light') {
-    return {
-      cardBg: 'rgba(255,255,255,0.95)',
-      cardBorder: 'rgba(0,0,0,0.1)',
-      badgeBg: 'rgba(0,0,0,0.04)',
-      badgeBorder: 'rgba(0,0,0,0.1)',
-      badgeHoverBg: 'rgba(0,0,0,0.08)',
-      badgeHoverBorder: 'rgba(0,0,0,0.15)',
-      textPrimary: 'rgba(0,0,0,0.9)',
-      textSecondary: 'rgba(0,0,0,0.6)',
-      textMuted: 'rgba(0,0,0,0.4)',
-      divider: 'rgba(0,0,0,0.08)',
-      sectionBg: 'rgba(0,0,0,0.03)',
-      btnBg: 'rgba(0,0,0,0.05)',
-      btnBorder: 'rgba(0,0,0,0.1)',
-      btnText: 'rgba(0,0,0,0.5)',
-      scoreBg: 'rgba(255,255,255,0.8)',
-    };
-  }
-
-  // Dark / Midnight themes
-  return {
-    cardBg: '#0d0d14',
-    cardBorder: 'rgba(255,255,255,0.08)',
-    badgeBg: 'rgba(255,255,255,0.03)',
-    badgeBorder: 'rgba(255,255,255,0.08)',
-    badgeHoverBg: 'rgba(255,255,255,0.06)',
-    badgeHoverBorder: 'rgba(255,255,255,0.15)',
-    textPrimary: 'rgba(255,255,255,0.9)',
-    textSecondary: 'rgba(255,255,255,0.6)',
-    textMuted: 'rgba(255,255,255,0.4)',
-    divider: 'rgba(255,255,255,0.06)',
-    sectionBg: 'rgba(255,255,255,0.02)',
-    btnBg: 'rgba(255,255,255,0.06)',
-    btnBorder: 'rgba(255,255,255,0.1)',
-    btnText: 'rgba(255,255,255,0.5)',
-    scoreBg: 'rgba(0,0,0,0.3)',
-  };
-}
 
 chrome.storage.local.get(['showCard', 'showBadge', 'enabled'], (result) => {
   settings.showCard = result.showCard !== false;
@@ -113,11 +38,10 @@ chrome.runtime.onMessage.addListener((msg) => {
     if (msg.showBadge !== undefined) settings.showBadge = msg.showBadge;
     if (msg.enabled !== undefined) settings.enabled = msg.enabled;
     injectedWallets.clear();
-    document.querySelectorAll('.devkarma-card, .devkarma-badge').forEach(el => el.remove());
-    // Restore hidden DA sections
-    document.querySelectorAll('[data-devkarma-hidden]').forEach(el => {
+    document.querySelectorAll('.blacklist-card, .blacklist-badge').forEach(el => el.remove());
+    document.querySelectorAll('[data-blacklist-hidden]').forEach(el => {
       el.style.display = '';
-      el.removeAttribute('data-devkarma-hidden');
+      el.removeAttribute('data-blacklist-hidden');
     });
     if (settings.enabled) setTimeout(scan, 100);
   }
@@ -140,40 +64,57 @@ async function fetchDevScore(wallet) {
     if (!res.ok) return { score: 0, tier: 'unknown' };
     const data = await res.json();
     scoreCache.set(wallet, { data, timestamp: Date.now() });
-    cleanupCache(); // Prevent memory leak
+    cleanupCache();
     return data;
   } catch (e) {
-    console.log('[DevKarma] API error:', e.name === 'AbortError' ? 'Request timeout' : e);
+    console.log('[Blacklist] API error:', e.name === 'AbortError' ? 'Request timeout' : e);
     return { score: 0, tier: 'unknown' };
   }
 }
 
 function getTier(score) {
-  if (score >= 700) return 'legend';
-  if (score >= 600) return 'elite';
-  if (score >= 500) return 'rising_star';
-  if (score >= 450) return 'proven';
-  if (score >= 300) return 'builder';
-  if (score >= 150) return 'verified';
-  if (score > 0) return 'new';
-  return 'unknown';
+  if (score >= 700) return 'sovereign';
+  if (score >= 600) return 'cleared';
+  if (score >= 500) return 'operative';
+  if (score >= 450) return 'vetted';
+  if (score >= 300) return 'tracked';
+  if (score >= 150) return 'filed';
+  if (score > 0) return 'flagged';
+  return 'ghost';
 }
 
 function getTierName(tier) {
   const names = {
-    legend: 'Legend', elite: 'Elite', rising_star: 'Rising Star',
-    proven: 'Proven', builder: 'Builder', verified: 'Verified',
-    new: 'New', unknown: 'Unknown'
+    sovereign: 'SOVEREIGN', cleared: 'CLEARED', operative: 'OPERATIVE',
+    vetted: 'VETTED', tracked: 'TRACKED', filed: 'FILED',
+    flagged: 'FLAGGED', ghost: 'GHOST'
   };
-  return names[tier] || 'Unknown';
+  return names[tier] || 'GHOST';
 }
 
-function getColor(score) {
-  if (score >= 600) return '#22c55e';
-  if (score >= 300) return '#eab308';
-  if (score >= 150) return '#f97316';
-  if (score > 0) return '#ef4444';
-  return '#666';
+// Monochrome intensity based on tier — white brightness levels + red for flagged
+function getTierColor(score) {
+  if (score >= 700) return '#ffffff';
+  if (score >= 600) return '#e5e5e5';
+  if (score >= 500) return '#cccccc';
+  if (score >= 450) return '#b3b3b3';
+  if (score >= 300) return '#999999';
+  if (score >= 150) return '#737373';
+  if (score > 0) return '#ff0000';
+  return '#4d4d4d';
+}
+
+function getTierBorderStyle(tier) {
+  switch (tier) {
+    case 'sovereign': return '2px double #ffffff';
+    case 'cleared': return '2px solid #e5e5e5';
+    case 'operative': return '1px solid #cccccc';
+    case 'vetted': return '1px solid #666666';
+    case 'tracked': return '1px dashed #999999';
+    case 'filed': return '1px dotted #737373';
+    case 'flagged': return '1px solid #ff0000';
+    default: return '1px solid #333333';
+  }
 }
 
 // Scrape funding info and token stats from Axiom page
@@ -184,7 +125,6 @@ function scrapeAxiomData(devWallet) {
     fundingWallet: null,
     fundingWalletShort: null,
     fundingAmount: null,
-    // Token stats scraped from Axiom's "Token Stats" section
     axiomMigrated: null,
     axiomNonMigrated: null,
     axiomTotalTokens: null
@@ -216,8 +156,6 @@ function scrapeAxiomData(devWallet) {
     data.fundingAmount = parseFloat(solAmountMatch[1]).toFixed(3) + ' SOL';
   }
 
-  // Scrape token stats from Axiom's Token Stats section
-  // Look for "Migrated: X" and "Non-migrated: Y" patterns
   const migratedMatch = allText.match(/Migrated:\s*(\d+)/i);
   const nonMigratedMatch = allText.match(/Non-migrated:\s*(\d+)/i);
 
@@ -231,79 +169,62 @@ function scrapeAxiomData(devWallet) {
     data.axiomTotalTokens = data.axiomMigrated + data.axiomNonMigrated;
   }
 
-  console.log('[DevKarma] Scraped Axiom data:', data);
+  console.log('[Blacklist] Scraped Axiom data:', data);
   return data;
 }
 
-// ============ MINI BADGE (theme-aware) ============
+// ============ MINI BADGE (monochrome terminal) ============
 function createMiniBadge(data, wallet, axiomData = null) {
-  const theme = getThemeColors();
   const score = Math.round(parseFloat(data?.score) || 0);
-  const color = getColor(score);
+  const tier = data?.tier || getTier(score);
+  const tierName = getTierName(tier);
+  const tierColor = getTierColor(score);
+  const borderStyle = getTierBorderStyle(tier);
 
-  // Use Axiom's scraped data as fallback if API returns 0 tokens
   const apiMigrations = data?.migrationCount || 0;
-  const apiTokens = data?.tokenCount || 0;
   const migrationCount = (apiMigrations === 0 && axiomData?.axiomMigrated !== null)
     ? axiomData.axiomMigrated
     : apiMigrations;
 
   const rugCount = data?.rugCount || 0;
   const hasRugs = rugCount > 0;
-  const twitterHandle = data?.twitterHandle || null;
   const displayScore = score === 0 ? '—' : score;
 
   const badge = document.createElement('div');
-  badge.className = 'devkarma-badge';
-  badge.title = `Click for full DevKarma profile`;
+  badge.className = 'blacklist-badge';
+  badge.title = `[BLACKLIST] ${tierName} — Click for dossier`;
   badge.style.cssText = `
     display: inline-flex;
     align-items: center;
-    gap: 12px;
-    padding: 6px 12px;
-    background: ${theme.badgeBg};
-    border: 1px solid ${theme.badgeBorder};
-    border-radius: 6px;
-    font-family: -apple-system, sans-serif;
-    font-size: 11px;
-    color: ${theme.textSecondary};
+    gap: 10px;
+    padding: 5px 10px;
+    background: #000000;
+    border: ${borderStyle};
+    font-family: 'JetBrains Mono', 'Courier New', monospace;
+    font-size: 10px;
+    color: #999999;
     cursor: pointer;
     margin-right: 8px;
     flex-shrink: 0;
     transition: all 0.15s ease;
+    ${tier === 'flagged' ? 'animation: flagged-pulse 2s ease-in-out infinite;' : ''}
   `;
 
   badge.innerHTML = `
-    <div style="display:flex;align-items:center;gap:6px;">
-      <span style="color:${theme.textMuted};font-size:10px;text-transform:uppercase;">Score</span>
-      <span style="color:${color};font-weight:700;font-size:13px;font-variant-numeric:tabular-nums;">${displayScore}</span>
-    </div>
-    <div style="width:1px;height:16px;background:${theme.divider};"></div>
-    <div style="display:flex;align-items:center;gap:6px;">
-      <span style="color:${theme.textMuted};font-size:10px;text-transform:uppercase;">Migrations</span>
-      <span style="color:#22c55e;font-weight:600;">${migrationCount}</span>
-    </div>
-    ${hasRugs ? `
-    <div style="width:1px;height:16px;background:${theme.divider};"></div>
-    <div style="display:flex;align-items:center;gap:4px;">
-      <span style="color:#ef4444;font-weight:600;">${rugCount} RUG${rugCount > 1 ? 'S' : ''}</span>
-    </div>
-    ` : ''}
-    ${twitterHandle ? `
-    <div style="width:1px;height:16px;background:${theme.divider};"></div>
-    <div style="display:flex;align-items:center;gap:4px;">
-      <span style="color:${theme.textSecondary};">@${twitterHandle}</span>
-    </div>
-    ` : ''}
+    <span style="color:#666666;font-size:9px;text-transform:uppercase;letter-spacing:0.1em;">[${tierName}]</span>
+    <span style="color:${tierColor};font-weight:700;font-size:12px;font-variant-numeric:tabular-nums;">${displayScore}</span>
+    <span style="width:1px;height:14px;background:#333333;display:inline-block;"></span>
+    <span style="color:#999999;font-size:9px;">M:${migrationCount}</span>
+    ${hasRugs ? `<span style="color:#ff0000;font-weight:700;font-size:9px;">R:${rugCount}</span>` : ''}
   `;
 
   badge.onmouseenter = () => {
-    badge.style.background = theme.badgeHoverBg;
-    badge.style.borderColor = theme.badgeHoverBorder;
+    badge.style.background = '#0a0a0a';
+    badge.style.borderColor = '#ffffff';
   };
   badge.onmouseleave = () => {
-    badge.style.background = theme.badgeBg;
-    badge.style.borderColor = theme.badgeBorder;
+    badge.style.background = '#000000';
+    badge.style.border = borderStyle;
   };
   badge.onclick = (e) => {
     e.stopPropagation();
@@ -314,27 +235,22 @@ function createMiniBadge(data, wallet, axiomData = null) {
   return badge;
 }
 
-// ============ FULL CARD (theme-aware) ============
+// ============ FULL CARD (monochrome terminal) ============
 function createFullCard(data, wallet, axiomData, isLoading = false) {
-  const theme = getThemeColors();
   const card = document.createElement('div');
-  card.className = 'devkarma-card';
-
-  const logoUrl = chrome.runtime.getURL('icons/icon32.png');
+  card.className = 'blacklist-card';
 
   if (isLoading) {
     card.style.cssText = `
-      background: ${theme.cardBg};
-      border: 1px solid ${theme.cardBorder};
-      border-radius: 8px;
+      background: #000000;
+      border: 1px solid #333333;
       padding: 14px 16px;
-      font-family: -apple-system, sans-serif;
+      font-family: 'JetBrains Mono', 'Courier New', monospace;
     `;
     card.innerHTML = `
       <div style="display:flex;align-items:center;gap:12px;">
-        <img src="${logoUrl}" style="width:24px;height:24px;border-radius:4px;" />
-        <span style="color:${theme.textPrimary};font-weight:600;font-size:14px;">DevKarma</span>
-        <span style="color:${theme.textMuted};font-size:12px;">Loading...</span>
+        <span style="color:#ffffff;font-weight:700;font-size:12px;">[BLACKLIST]</span>
+        <span style="color:#666666;font-size:11px;animation:cursor-blink 1s step-end infinite;">SCANNING_</span>
       </div>
     `;
     return card;
@@ -343,9 +259,9 @@ function createFullCard(data, wallet, axiomData, isLoading = false) {
   const score = Math.round(parseFloat(data?.score) || 0);
   const tier = data?.tier || getTier(score);
   const tierName = getTierName(tier);
-  const color = getColor(score);
+  const tierColor = getTierColor(score);
+  const borderStyle = getTierBorderStyle(tier);
 
-  // Use Axiom's scraped data as fallback if API returns 0 tokens
   const apiTokens = data?.tokenCount || 0;
   const apiMigrations = data?.migrationCount || 0;
   const tokenCount = (apiTokens === 0 && axiomData?.axiomTotalTokens !== null)
@@ -359,7 +275,6 @@ function createFullCard(data, wallet, axiomData, isLoading = false) {
   const hasRugs = rugCount > 0;
   const migrationRate = tokenCount > 0 ? Math.round((migrationCount / tokenCount) * 100) : 0;
   const twitterHandle = data?.twitterHandle || null;
-  const isBased = score >= 600;
 
   const devAddress = axiomData?.devAddress || wallet;
   const devAddressShort = axiomData?.devAddressShort || `${wallet.slice(0, 4)}...${wallet.slice(-4)}`;
@@ -368,99 +283,93 @@ function createFullCard(data, wallet, axiomData, isLoading = false) {
   const fundingAmount = axiomData?.fundingAmount;
 
   let status = '';
-  let statusColor = theme.textMuted;
+  let statusColor = '#666666';
   if (hasRugs) {
-    status = `⚠️ ${rugCount} rug${rugCount > 1 ? 's' : ''} detected`;
-    statusColor = '#ef4444';
+    status = `> WARNING: ${rugCount} RUG${rugCount > 1 ? 'S' : ''} DETECTED`;
+    statusColor = '#ff0000';
   } else if (migrationCount >= 3) {
-    status = '✓ Proven track record';
-    statusColor = '#22c55e';
+    status = '> VERIFIED TRACK RECORD';
+    statusColor = '#ffffff';
   } else if (migrationCount >= 1) {
-    status = '✓ Has migrated token';
-    statusColor = '#22c55e';
+    status = '> HAS MIGRATED TOKEN';
+    statusColor = '#e5e5e5';
   } else if (tokenCount > 0) {
-    status = 'Building history';
+    status = '> BUILDING HISTORY';
+    statusColor = '#999999';
   } else {
-    status = 'New developer';
+    status = '> NEW SUBJECT';
+    statusColor = '#666666';
   }
 
-  // Based dev gets special green tint
-  const basedBg = getAxiomTheme() === 'light'
-    ? 'linear-gradient(135deg, rgba(34,197,94,0.08) 0%, rgba(34,197,94,0.04) 100%)'
-    : 'linear-gradient(135deg, rgba(34,197,94,0.08) 0%, rgba(46,74,59,0.12) 100%)';
-  const basedBorder = 'rgba(34,197,94,0.2)';
-
   card.style.cssText = `
-    background: ${isBased ? basedBg : theme.cardBg};
-    border: 1px solid ${isBased ? basedBorder : theme.cardBorder};
-    border-radius: 8px;
+    background: #000000;
+    border: ${borderStyle};
     padding: 14px 16px;
-    font-family: -apple-system, sans-serif;
+    font-family: 'JetBrains Mono', 'Courier New', monospace;
+    ${tier === 'sovereign' ? 'box-shadow: 0 0 15px rgba(255,255,255,0.1);' : ''}
+    ${tier === 'flagged' ? 'box-shadow: 0 0 15px rgba(255,0,0,0.15);' : ''}
   `;
 
   card.innerHTML = `
     <!-- Header -->
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid ${theme.divider};">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid #333333;">
       <div style="display:flex;align-items:center;gap:8px;">
-        <img src="${logoUrl}" style="width:20px;height:20px;border-radius:3px;" />
-        <span style="color:${theme.textPrimary};font-weight:600;font-size:13px;">DevKarma</span>
-        ${isBased ? '<span style="color:#22c55e;font-size:11px;">⚡ BASED DEV</span>' : ''}
+        <span style="color:#ffffff;font-weight:700;font-size:12px;">[BLACKLIST]</span>
+        <span style="color:${tierColor};font-size:10px;font-weight:700;">${tierName}</span>
       </div>
-      ${!isBased ? `<span style="color:${theme.textMuted};font-size:10px;">Developer Reputation</span>` : ''}
+      <span style="color:#666666;font-size:9px;text-transform:uppercase;letter-spacing:0.1em;">SUBJECT DOSSIER</span>
     </div>
 
     <!-- Wallet Info -->
-    <div style="margin-bottom:12px;padding:10px;background:${theme.sectionBg};border-radius:6px;">
+    <div style="margin-bottom:12px;padding:10px;background:#0a0a0a;border:1px solid #333333;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:${fundingWallet ? '8px' : '0'};">
         <div style="display:flex;align-items:center;gap:8px;">
-          <span style="color:${theme.textMuted};font-size:11px;min-width:24px;">DA:</span>
-          <span style="color:${theme.textSecondary};font-size:12px;font-family:monospace;">${devAddressShort}</span>
+          <span style="color:#666666;font-size:10px;min-width:24px;">DA:</span>
+          <span style="color:#999999;font-size:11px;font-family:monospace;">${devAddressShort}</span>
         </div>
-        <button class="copy-btn" data-wallet="${devAddress}" style="padding:3px 8px;background:${theme.btnBg};border:1px solid ${theme.btnBorder};border-radius:4px;color:${theme.btnText};font-size:10px;cursor:pointer;">Copy</button>
+        <button class="copy-btn" data-wallet="${devAddress}" style="padding:2px 6px;background:#000000;border:1px solid #333333;color:#666666;font-size:9px;cursor:pointer;font-family:monospace;">[ COPY ]</button>
       </div>
       ${fundingWallet ? `
       <div style="display:flex;align-items:center;justify-content:space-between;">
         <div style="display:flex;align-items:center;gap:8px;">
-          <span style="color:${theme.textMuted};font-size:11px;min-width:24px;">Via:</span>
-          <span style="color:${theme.textSecondary};font-size:12px;font-family:monospace;">${fundingWalletShort}</span>
-          ${fundingAmount ? `<span style="color:${theme.textMuted};font-size:11px;">${fundingAmount}</span>` : ''}
+          <span style="color:#666666;font-size:10px;min-width:24px;">VIA:</span>
+          <span style="color:#999999;font-size:11px;font-family:monospace;">${fundingWalletShort}</span>
+          ${fundingAmount ? `<span style="color:#666666;font-size:10px;">${fundingAmount}</span>` : ''}
         </div>
-        <button class="copy-btn" data-wallet="${fundingWallet}" style="padding:3px 8px;background:${theme.btnBg};border:1px solid ${theme.btnBorder};border-radius:4px;color:${theme.btnText};font-size:10px;cursor:pointer;">Copy</button>
+        <button class="copy-btn" data-wallet="${fundingWallet}" style="padding:2px 6px;background:#000000;border:1px solid #333333;color:#666666;font-size:9px;cursor:pointer;font-family:monospace;">[ COPY ]</button>
       </div>
       ` : ''}
     </div>
 
     <!-- Score + Stats -->
     <div style="display:flex;align-items:center;gap:14px;margin-bottom:12px;">
-      <!-- Score -->
       <div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0;">
-        <span style="font-size:28px;font-weight:700;color:${color};line-height:1;font-variant-numeric:tabular-nums;">${score || '—'}</span>
-        <span style="font-size:9px;color:${theme.textMuted};text-transform:uppercase;letter-spacing:0.5px;">score</span>
+        <span style="font-size:26px;font-weight:700;color:${tierColor};line-height:1;font-variant-numeric:tabular-nums;">${score || '—'}</span>
+        <span style="font-size:8px;color:#666666;text-transform:uppercase;letter-spacing:0.15em;">SCORE</span>
       </div>
 
-      <div style="width:1px;height:36px;background:${theme.divider};"></div>
+      <div style="width:1px;height:36px;background:#333333;"></div>
 
-      <!-- Stats -->
       <div style="flex:1;">
         <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
           ${twitterHandle
-            ? `<a href="https://x.com/${twitterHandle}" target="_blank" style="font-size:11px;padding:2px 8px;background:${color};color:white;font-weight:600;border-radius:3px;text-decoration:none;transition:opacity 0.15s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">@${twitterHandle}</a>`
-            : `<span style="font-size:11px;padding:2px 8px;background:${theme.textMuted};color:white;font-weight:600;border-radius:3px;">Unclaimed</span>`
+            ? `<a href="https://x.com/${twitterHandle}" target="_blank" style="font-size:10px;padding:2px 6px;border:1px solid #666666;color:#999999;font-weight:700;text-decoration:none;font-family:monospace;transition:color 0.15s;" onmouseover="this.style.color='#ffffff'" onmouseout="this.style.color='#999999'">@${twitterHandle}</a>`
+            : `<span style="font-size:10px;padding:2px 6px;border:1px solid #333333;color:#666666;font-weight:700;">UNCLAIMED</span>`
           }
         </div>
-        <div style="display:flex;gap:14px;font-size:11px;color:${theme.textSecondary};">
-          <span><strong style="color:${theme.textPrimary};">${tokenCount}</strong> tokens</span>
-          <span><strong style="color:#22c55e;">${migrationCount}</strong> migrated</span>
-          <span><strong style="color:${theme.textPrimary};">${migrationRate}%</strong> rate</span>
-          ${hasRugs ? `<span><strong style="color:#ef4444;">${rugCount}</strong> rugs</span>` : ''}
+        <div style="display:flex;gap:12px;font-size:10px;color:#999999;">
+          <span><strong style="color:${tierColor};">${tokenCount}</strong> tokens</span>
+          <span><strong style="color:${tierColor};">${migrationCount}</strong> migrated</span>
+          <span><strong style="color:${tierColor};">${migrationRate}%</strong> rate</span>
+          ${hasRugs ? `<span><strong style="color:#ff0000;">${rugCount}</strong> rugs</span>` : ''}
         </div>
       </div>
     </div>
 
     <!-- Status + Link -->
-    <div style="display:flex;align-items:center;justify-content:space-between;padding-top:10px;border-top:1px solid ${theme.divider};">
-      <span style="font-size:11px;color:${statusColor};">${status}</span>
-      <span class="profile-link" style="color:${theme.textSecondary};font-size:11px;cursor:pointer;transition:color 0.15s;">View full profile →</span>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding-top:10px;border-top:1px solid #333333;">
+      <span style="font-size:10px;color:${statusColor};">${status}</span>
+      <span class="profile-link" style="color:#666666;font-size:10px;cursor:pointer;transition:color 0.15s;font-weight:700;">VIEW DOSSIER ></span>
     </div>
   `;
 
@@ -469,8 +378,8 @@ function createFullCard(data, wallet, axiomData, isLoading = false) {
     btn.onclick = (e) => {
       e.stopPropagation();
       navigator.clipboard.writeText(btn.dataset.wallet);
-      btn.textContent = 'Copied!';
-      setTimeout(() => btn.textContent = 'Copy', 1500);
+      btn.textContent = '[ OK ]';
+      setTimeout(() => btn.textContent = '[ COPY ]', 1500);
     };
   });
 
@@ -479,8 +388,8 @@ function createFullCard(data, wallet, axiomData, isLoading = false) {
     e.stopPropagation();
     window.open(`${SITE_BASE}/profile/${wallet}`, '_blank');
   };
-  profileLink.onmouseenter = (e) => e.target.style.color = '#22c55e';
-  profileLink.onmouseleave = (e) => e.target.style.color = theme.textSecondary;
+  profileLink.onmouseenter = (e) => e.target.style.color = '#ffffff';
+  profileLink.onmouseleave = (e) => e.target.style.color = '#666666';
 
   return card;
 }
@@ -511,21 +420,18 @@ async function injectElements() {
   }
 
   if (!wallet) {
-    console.log('[DevKarma] No wallet found');
+    console.log('[Blacklist] No wallet found');
     return;
   }
 
   if (injectedWallets.has(wallet)) return;
 
-  console.log('[DevKarma] Found wallet:', wallet);
+  console.log('[Blacklist] Found wallet:', wallet);
   injectedWallets.add(wallet);
 
-  // Scrape Axiom data
   const axiomData = scrapeAxiomData(wallet);
-
-  // Fetch API data
   const data = await fetchDevScore(wallet);
-  console.log('[DevKarma] Got data:', data);
+  console.log('[Blacklist] Got data:', data);
 
   // Update stats
   const stats = await chrome.storage.local.get(['stats']) || {};
@@ -537,7 +443,7 @@ async function injectElements() {
   // INJECT MINI BADGE on RIGHT side of header
   if (settings.showBadge) {
     const headerBar = document.querySelector('.flex.max-h-\\[64px\\].min-h-\\[64px\\]');
-    if (headerBar && !headerBar.querySelector('.devkarma-badge')) {
+    if (headerBar && !headerBar.querySelector('.blacklist-badge')) {
       const badge = createMiniBadge(data, wallet, axiomData);
       const rightContainer = headerBar.querySelector('.flex.flex-1.flex-row.items-center.justify-end');
       if (rightContainer) {
@@ -545,13 +451,12 @@ async function injectElements() {
       } else {
         headerBar.appendChild(badge);
       }
-      console.log('[DevKarma] Mini badge injected on right');
+      console.log('[Blacklist] Mini badge injected');
     }
   }
 
   // INJECT FULL CARD replacing DA section
   if (settings.showCard && daSection) {
-    // Find the section container
     let section = daSection;
     for (let i = 0; i < 5; i++) {
       section = section.parentElement;
@@ -560,31 +465,29 @@ async function injectElements() {
       if (rect.height > 50 && rect.height < 300) break;
     }
 
-    if (section && !document.querySelector('.devkarma-card')) {
-      // Hide original DA section
+    if (section && !document.querySelector('.blacklist-card')) {
       section.style.display = 'none';
-      section.setAttribute('data-devkarma-hidden', 'true');
+      section.setAttribute('data-blacklist-hidden', 'true');
 
-      // Insert card before hidden section
       const card = createFullCard(data, wallet, axiomData);
       section.insertAdjacentElement('beforebegin', card);
-      console.log('[DevKarma] Full card injected (replaced DA)');
+      console.log('[Blacklist] Full card injected');
     }
   }
 }
 
 function scan() {
   if (!settings.enabled) return;
-  console.log('[DevKarma] Scanning...');
-  injectElements().catch(e => console.error('[DevKarma] Error:', e));
+  console.log('[Blacklist] Scanning...');
+  injectElements().catch(e => console.error('[Blacklist] Error:', e));
 }
 
-console.log('[DevKarma] Extension loaded');
+console.log('[Blacklist] Extension loaded');
 setTimeout(scan, 1500);
 setTimeout(scan, 3000);
 
 const observer = new MutationObserver(() => {
-  clearTimeout(window.devkarmaScanTimeout);
-  window.devkarmaScanTimeout = setTimeout(scan, 500);
+  clearTimeout(window.blacklistScanTimeout);
+  window.blacklistScanTimeout = setTimeout(scan, 500);
 });
 observer.observe(document.body, { childList: true, subtree: true });

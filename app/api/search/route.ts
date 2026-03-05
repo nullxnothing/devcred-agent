@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { searchUsers, getWalletByAddress, getTokenByMint } from '@/lib/db';
 import { PublicKey } from '@solana/web3.js';
+import { apiOk, apiBadRequest, apiError, withCache } from '@/lib/api-response';
 
 export async function GET(request: NextRequest) {
   try {
@@ -8,7 +9,7 @@ export async function GET(request: NextRequest) {
     const query = searchParams.get('q');
 
     if (!query || query.length < 2) {
-      return NextResponse.json({ error: 'Query must be at least 2 characters' }, { status: 400 });
+      return apiBadRequest('Query must be at least 2 characters');
     }
 
     const results: {
@@ -88,9 +89,10 @@ export async function GET(request: NextRequest) {
       rank: u.rank,
     }));
 
-    return NextResponse.json(results);
+    // Cache search results for 30 seconds, stale for 60 more
+    return withCache(apiOk(results), 30, 60);
   } catch (error) {
     console.error('Error searching:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return apiError(error);
   }
 }

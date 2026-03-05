@@ -1,5 +1,5 @@
 /**
- * DevCred Agent Entry Point
+ * Blacklist Agent Entry Point
  *
  * Run with: npx tsx agent/run.ts
  *
@@ -19,7 +19,7 @@ const STATS_INTERVAL_MS = 60 * 1000; // Log stats every minute
 
 async function main() {
   console.log('='.repeat(50));
-  console.log('DevCred Agent - Pump.fun Monitor');
+  console.log('Blacklist Agent - Pump.fun Monitor');
   console.log('='.repeat(50));
 
   // Check required env vars

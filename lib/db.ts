@@ -130,33 +130,42 @@ export async function getUserByPumpFunUsername(username: string): Promise<User |
  */
 export async function createUserFromWallet(walletAddress: string): Promise<User> {
   const shortAddress = `${walletAddress.slice(0, 4)}...${walletAddress.slice(-4)}`;
-  
-  const result = await pool.query(
-    `INSERT INTO dk_users (
-       twitter_id, twitter_handle, twitter_name, avatar_url, bio, 
-       is_verified, primary_wallet
-     )
-     VALUES (NULL, $1, $2, $3, NULL, TRUE, $4)
-     RETURNING *`,
-    [
-      `dev_${walletAddress.slice(0, 8)}`, // generated handle
-      `Dev ${shortAddress}`, // display name
-      `https://api.dicebear.com/7.x/identicon/svg?seed=${walletAddress}`, // avatar
-      walletAddress // primary_wallet
-    ]
-  );
-  
-  const user = result.rows[0];
-  
-  // Also create entry in dk_wallets for consistency
-  await createWallet({
-    user_id: user.id,
-    address: walletAddress,
-    label: 'Primary Wallet',
-    is_primary: true
-  });
-  
-  return user;
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    const result = await client.query(
+      `INSERT INTO dk_users (
+         twitter_id, twitter_handle, twitter_name, avatar_url, bio,
+         is_verified, primary_wallet
+       )
+       VALUES (NULL, $1, $2, $3, NULL, TRUE, $4)
+       RETURNING *`,
+      [
+        `dev_${walletAddress.slice(0, 8)}`,
+        `Dev ${shortAddress}`,
+        `https://api.dicebear.com/7.x/identicon/svg?seed=${walletAddress}`,
+        walletAddress
+      ]
+    );
+
+    const user = result.rows[0];
+
+    await client.query(
+      `INSERT INTO dk_wallets (user_id, address, label, is_primary, verified_at)
+       VALUES ($1, $2, $3, $4, NOW())`,
+      [user.id, walletAddress, 'Primary Wallet', true]
+    );
+
+    await client.query('COMMIT');
+    return user;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 /**
@@ -286,17 +295,25 @@ export async function deleteWalletByAddress(address: string, userId: string): Pr
 }
 
 export async function setWalletPrimary(id: string, userId: string): Promise<boolean> {
-  // First, unset all other wallets as primary
-  await pool.query(
-    'UPDATE dk_wallets SET is_primary = FALSE WHERE user_id = $1',
-    [userId]
-  );
-  // Then set the selected wallet as primary
-  const result = await pool.query(
-    'UPDATE dk_wallets SET is_primary = TRUE WHERE id = $1 AND user_id = $2',
-    [id, userId]
-  );
-  return (result.rowCount ?? 0) > 0;
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query(
+      'UPDATE dk_wallets SET is_primary = FALSE WHERE user_id = $1',
+      [userId]
+    );
+    const result = await client.query(
+      'UPDATE dk_wallets SET is_primary = TRUE WHERE id = $1 AND user_id = $2',
+      [id, userId]
+    );
+    await client.query('COMMIT');
+    return (result.rowCount ?? 0) > 0;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 // Tokens
@@ -468,33 +485,33 @@ export async function updateRanks(): Promise<void> {
   `);
 }
 
-// Update a single user's rank (faster for single updates)
+// Update a single user's rank based on how many users score higher
 export async function updateUserRank(userId: string): Promise<number | null> {
-  // Calculate rank based on score position
   const result = await pool.query(`
-    WITH ranked AS (
-      SELECT DISTINCT u.id,
-             ROW_NUMBER() OVER (ORDER BY u.total_score DESC, u.created_at ASC) as new_rank
-      FROM dk_users u
-      INNER JOIN dk_wallets w ON u.id = w.user_id
-    )
     UPDATE dk_users
-    SET rank = ranked.new_rank
-    FROM ranked
-    WHERE dk_users.id = ranked.id AND dk_users.id = $1
-    RETURNING dk_users.rank
+    SET rank = (
+      SELECT COUNT(DISTINCT u2.id) + 1
+      FROM dk_users u2
+      INNER JOIN dk_wallets w2 ON u2.id = w2.user_id
+      WHERE u2.total_score > dk_users.total_score
+         OR (u2.total_score = dk_users.total_score AND u2.created_at < dk_users.created_at)
+    )
+    WHERE id = $1
+    RETURNING rank
   `, [userId]);
   return result.rows[0]?.rank || null;
 }
 
 // Search users by handle
 export async function searchUsers(query: string, limit = 10): Promise<User[]> {
+  // Escape ILIKE metacharacters to prevent pattern injection
+  const escapedQuery = query.replace(/[%_\\]/g, '\\$&');
   const result = await pool.query(
     `SELECT * FROM dk_users
      WHERE twitter_handle ILIKE $1 OR twitter_name ILIKE $1
      ORDER BY total_score DESC
      LIMIT $2`,
-    [`%${query}%`, limit]
+    [`%${escapedQuery}%`, limit]
   );
   return result.rows;
 }
@@ -540,43 +557,52 @@ export async function upsertUserByWallet(walletAddress: string, data: ScrapedUse
     return result.rows[0];
   }
 
-  // Create new user with wallet
+  // Create new user with wallet (in a transaction)
   const shortAddress = `${walletAddress.slice(0, 4)}...${walletAddress.slice(-4)}`;
+  const client = await pool.connect();
 
-  const result = await pool.query(
-    `INSERT INTO dk_users (
-       twitter_handle, twitter_name, avatar_url,
-       is_verified, primary_wallet, total_score, tier, scraped_at,
-       token_count, migration_count, rug_count, top_mcap
-     )
-     VALUES ($1, $2, $3, TRUE, $4, $5, $6, $7, $8, $9, $10, $11)
-     RETURNING *`,
-    [
-      `dev_${walletAddress.slice(0, 8)}`,
-      `Dev ${shortAddress}`,
-      `https://api.dicebear.com/7.x/identicon/svg?seed=${walletAddress}`,
-      walletAddress,
-      data.total_score,
-      data.tier,
-      data.scraped_at || new Date().toISOString(),
-      data.token_count ?? 0,
-      data.migration_count ?? 0,
-      data.rug_count ?? 0,
-      data.top_mcap ?? null
-    ]
-  );
+  try {
+    await client.query('BEGIN');
 
-  const user = result.rows[0];
+    const result = await client.query(
+      `INSERT INTO dk_users (
+         twitter_handle, twitter_name, avatar_url,
+         is_verified, primary_wallet, total_score, tier, scraped_at,
+         token_count, migration_count, rug_count, top_mcap
+       )
+       VALUES ($1, $2, $3, TRUE, $4, $5, $6, $7, $8, $9, $10, $11)
+       RETURNING *`,
+      [
+        `dev_${walletAddress.slice(0, 8)}`,
+        `Dev ${shortAddress}`,
+        `https://api.dicebear.com/7.x/identicon/svg?seed=${walletAddress}`,
+        walletAddress,
+        data.total_score,
+        data.tier,
+        data.scraped_at || new Date().toISOString(),
+        data.token_count ?? 0,
+        data.migration_count ?? 0,
+        data.rug_count ?? 0,
+        data.top_mcap ?? null
+      ]
+    );
 
-  // Create associated wallet record
-  await createWallet({
-    user_id: user.id,
-    address: walletAddress,
-    label: 'Primary Wallet',
-    is_primary: true
-  });
+    const user = result.rows[0];
 
-  return user;
+    await client.query(
+      `INSERT INTO dk_wallets (user_id, address, label, is_primary, verified_at)
+       VALUES ($1, $2, $3, $4, NOW())`,
+      [user.id, walletAddress, 'Primary Wallet', true]
+    );
+
+    await client.query('COMMIT');
+    return user;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 // KOLs (Key Opinion Leaders)

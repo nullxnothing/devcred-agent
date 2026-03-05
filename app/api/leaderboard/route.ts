@@ -5,7 +5,8 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const limitParam = searchParams.get('limit');
-    const limit = Math.min(100, Math.max(1, parseInt(limitParam || '50', 10)));
+    const parsed = parseInt(limitParam || '50', 10);
+    const limit = Number.isNaN(parsed) ? 50 : Math.min(100, Math.max(1, parsed));
 
     const leaderboard = await getLeaderboardData(limit);
 

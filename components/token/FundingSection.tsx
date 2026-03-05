@@ -9,12 +9,12 @@ export function FundingSection() {
           <div className="w-12 h-12 bg-accent/10 flex items-center justify-center border-2 border-accent/30 accent-box-glow">
             <Database size={24} className="text-accent icon-float" />
           </div>
-          <h2 className="text-3xl md:text-4xl font-black font-display-mock text-dark">
-            Powering DevCred
+          <h2 className="text-3xl md:text-4xl font-mono font-extrabold uppercase text-white">
+            Powering Blacklist
           </h2>
         </div>
         <p className="text-text-muted mb-10 text-lg max-w-2xl">
-          Every reputation score requires real-time blockchain queries. The $KARMA token
+          Every threat assessment requires real-time blockchain queries. The $BLKLIST token
           funds the infrastructure that makes this possible.
         </p>
 
@@ -50,7 +50,7 @@ export function FundingSection() {
             <h3 className="font-bold text-xl text-dark">Continuous Operation</h3>
           </div>
           <p className="text-text-muted mb-4">
-            DevCred runs 24/7 monitoring of new token launches, pre-computing reputation
+            Blacklist runs 24/7 monitoring of new token launches, pre-computing threat
             scores so traders get instant results. This requires:
           </p>
           <div className="grid sm:grid-cols-3 gap-4">

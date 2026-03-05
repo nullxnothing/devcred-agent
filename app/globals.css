@@ -1,5 +1,11 @@
 @import "tailwindcss";
 
+/* ==========================================
+   BLACKLIST — Developer Threat Assessment
+   Terminal/hacker monochrome aesthetic
+   Dark-only, monospace, surveillance-themed
+   ========================================== */
+
 @layer base {
   *, *::before, *::after {
     box-sizing: border-box;
@@ -12,9 +18,11 @@
   /* Smooth scrolling */
   html {
     scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
   }
 
-  /* Custom cursor - friendly pointer for clickable elements */
+  /* Cursor rules */
   body {
     cursor: default;
   }
@@ -26,668 +34,18 @@
     cursor: pointer;
   }
 
-  /* Smooth transitions for all interactive elements */
+  /* Smooth transitions for interactive elements */
   a, button, input, select, textarea {
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
-  /* Smoother image and card transitions */
   img {
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
                 filter 0.3s cubic-bezier(0.4, 0, 0.2, 1),
                 opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
-}
 
-:root {
-  /* DevKarma Brand Colors - Clean/Professional Theme */
-  --dark: #3B3B3B;
-  --dark-light: #4A4A4A;
-  --dark-medium: #5A5A5A;
-  --cream: #FBF0DF;
-  --cream-dark: #F5E6D3;
-  --white: #FFFFFF;
-  --accent: #2e4a3b;           /* Forest green - brand/buttons */
-  --accent-light: #3d6350;
-  --accent-dark: #1f3228;
-  --border: #3B3B3B;
-  --text-muted: #6B6B6B;
-
-  /* Inverted sections (stay dark in both modes) */
-  --inverted-bg: #1a1d23;
-  --inverted-text: #e8e8e8;
-  --inverted-muted: #9ca3af;
-
-  /* Score Colors - Graduated scale */
-  --score-legend: #B8860B;     /* Dark Goldenrod - better contrast */
-  --score-elite: #9B59B6;      /* Purple */
-  --score-rising: #F59E0B;     /* Amber/Orange */
-  --score-proven: #10b981;     /* Emerald - distinct from forest green accent */
-  --score-builder: #3b82f6;    /* Blue */
-  --score-verified: #6B7280;   /* Neutral gray */
-  --score-low: #F97316;        /* Orange - warning */
-  --score-danger: #B91C1C;     /* Darker red - better white text contrast (WCAG AA) */
-  --score-negative: #DC2626;   /* Red - slightly darkened for readability */
-  --score-penalized: #8B0000;  /* Dark red */
-  --score-unverified: #BDC3C7; /* Light gray */
-
-  /* Medal colors */
-  --medal-gold: #FFD700;
-  --medal-silver: #C0C0C0;
-  --medal-bronze: #CD7F32;
-
-  /* Shadow color */
-  --shadow-color: #3B3B3B;
-
-  /* Semantic colors for states */
-  --success: #16a34a;
-  --success-light: #dcfce7;
-  --success-border: #22c55e;
-  --warning: #d97706;
-  --warning-light: #fef3c7;
-  --warning-border: #f59e0b;
-  --error: #dc2626;
-  --error-light: #fef2f2;
-  --error-border: #ef4444;
-
-  /* Background/Foreground pairs for theming */
-  --background: var(--cream);
-  --foreground: var(--dark);
-  
-  /* Card/Surface colors */
-  --card: var(--white);
-  --card-hover: var(--cream);
-  --surface: var(--cream-dark);
-}
-
-/* Dark mode - class-based for next-themes */
-.dark {
-  /* Dark mode semantic colors - richer, warmer tones */
-  --dark: #e8e8e8;            /* Light text on dark bg */
-  --dark-light: #1e2024;      /* Slightly elevated surface */
-  --dark-medium: #252830;     /* Medium surface */
-  --cream: #13151a;           /* Main dark background - blue-ish tint */
-  --cream-dark: #0d0f12;      /* Deeper background */
-  --white: #1a1d23;           /* Card background - subtle blue */
-  --accent: #4ade80;          /* Brighter green for dark mode */
-  --accent-light: #86efac;
-  --accent-dark: #22c55e;
-  --border: #2e3138;          /* Subtle border */
-  --text-muted: #9ca3af;      /* Muted text */
-  
-  /* Medal colors for dark mode */
-  --medal-gold: #DAA520;
-  --medal-silver: #A0A0A0;
-  --medal-bronze: #A0522D;
-  --score-elite: #A78BFA;      /* Purple */
-  --score-rising: #FBBF24;     /* Amber */
-  --score-proven: #34d399;
-  --score-builder: #60a5fa;
-  --score-verified: #9CA3AF;
-  --score-low: #FB923C;
-  --score-danger: #F87171;
-  --score-negative: #EF4444;
-  --score-penalized: #DC2626;
-  --score-unverified: #6B7280;
-
-  /* Medal colors for dark mode */
-  --medal-gold: #DAA520;
-  --medal-silver: #A0A0A0;
-  --medal-bronze: #A0522D;
-
-  /* Shadow color */
-  --shadow-color: rgba(255, 255, 255, 0.08);
-
-  /* Semantic colors for dark mode */
-  --success: #22c55e;
-  --success-light: rgba(34, 197, 94, 0.15);
-  --success-border: #16a34a;
-  --warning: #f59e0b;
-  --warning-light: rgba(245, 158, 11, 0.15);
-  --warning-border: #d97706;
-  --error: #ef4444;
-  --error-light: rgba(239, 68, 68, 0.15);
-  --error-border: #dc2626;
-
-  /* Background/Foreground for dark */
-  --background: #13151a;
-  --foreground: #e8e8e8;
-  
-  /* Card/Surface colors for dark */
-  --card: #1a1d23;
-  --card-hover: #22252c;
-  --surface: #16181d;
-
-  /* Inverted sections (stay dark in dark mode) */
-  --inverted-bg: #1a1d23;
-  --inverted-text: #e8e8e8;
-  --inverted-muted: #9ca3af;
-}
-
-@theme inline {
-  --color-cream: var(--cream);
-  --color-cream-dark: var(--cream-dark);
-  --color-white: var(--white);
-  --color-dark: var(--dark);
-  --color-dark-light: var(--dark-light);
-  --color-dark-medium: var(--dark-medium);
-  --color-accent: var(--accent);
-  --color-accent-light: var(--accent-light);
-  --color-accent-dark: var(--accent-dark);
-  --color-border: var(--border);
-  --color-text-muted: var(--text-muted);
-
-  /* Semantic theme colors - auto dark mode */
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-hover: var(--card-hover);
-  --color-surface: var(--surface);
-
-  /* Score colors */
-  --color-score-legend: var(--score-legend);
-  --color-score-elite: var(--score-elite);
-  --color-score-rising: var(--score-rising);
-  --color-score-proven: var(--score-proven);
-  --color-score-builder: var(--score-builder);
-  --color-score-verified: var(--score-verified);
-  --color-score-low: var(--score-low);
-  --color-score-danger: var(--score-danger);
-  --color-score-negative: var(--score-negative);
-  --color-score-penalized: var(--score-penalized);
-  --color-score-unverified: var(--score-unverified);
-
-  /* Medal colors */
-  --color-medal-gold: var(--medal-gold);
-  --color-medal-silver: var(--medal-silver);
-  --color-medal-bronze: var(--medal-bronze);
-
-  /* Semantic state colors */
-  --color-success: var(--success);
-  --color-success-light: var(--success-light);
-  --color-success-border: var(--success-border);
-  --color-warning: var(--warning);
-  --color-warning-light: var(--warning-light);
-  --color-warning-border: var(--warning-border);
-  --color-error: var(--error);
-  --color-error-light: var(--error-light);
-  --color-error-border: var(--error-border);
-
-  /* Shadow */
-  --color-shadow: var(--shadow-color);
-
-  /* Inverted sections (stay dark in both light and dark mode) */
-  --color-inverted-bg: var(--inverted-bg);
-  --color-inverted-text: var(--inverted-text);
-  --color-inverted-muted: var(--inverted-muted);
-
-  --font-display: var(--font-marker), sans-serif;
-  --font-body: var(--font-dm-sans), sans-serif;
-  --font-mono: var(--font-jetbrains), monospace;
-}
-
-body {
-  background-color: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-dm-sans), sans-serif;
-}
-
-/* Display heading utility - USE ONLY FOR USERNAMES/HEADLINES */
-.font-display-mock {
-  font-family: var(--font-marker), system-ui, sans-serif;
-  font-weight: 900;
-  text-transform: uppercase;
-  letter-spacing: -0.02em;
-}
-
-/* Data/stats typography - clean numerical display for scores, ranks, counts */
-.font-stat {
-  font-family: var(--font-dm-sans), system-ui, sans-serif;
-  font-weight: 900;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.01em;
-}
-
-/* Custom scrollbar styling */
-::-webkit-scrollbar {
-  width: 12px;
-}
-
-::-webkit-scrollbar-track {
-  background: var(--cream);
-  border-left: 2px solid var(--dark);
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--dark);
-  border: 2px solid var(--cream);
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--accent);
-}
-
-/* Selection styling */
-::selection {
-  background-color: var(--accent);
-  color: var(--cream);
-}
-
-/* Animated gradient for tier badges */
-@keyframes gradient-x {
-  0%, 100% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-}
-
-.animate-gradient-x {
-  animation: gradient-x 3s ease infinite;
-}
-
-/* Shimmer effect for legend tier */
-@keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
-}
-
-.animate-shimmer {
-  animation: shimmer 2s linear infinite;
-  background-size: 200% 100%;
-}
-
-/* Glow pulse for high scores */
-@keyframes glow-pulse {
-  0%, 100% {
-    box-shadow: 0 0 20px rgba(46, 74, 59, 0.4), 0 0 40px rgba(46, 74, 59, 0.2);
-  }
-  50% {
-    box-shadow: 0 0 30px rgba(46, 74, 59, 0.6), 0 0 60px rgba(46, 74, 59, 0.3);
-  }
-}
-
-.animate-glow-pulse {
-  animation: glow-pulse 2s ease-in-out infinite;
-}
-
-/* Gold glow for legend tier */
-@keyframes gold-glow {
-  0%, 100% {
-    box-shadow: 0 0 20px rgba(255, 215, 0, 0.5), 0 0 40px rgba(255, 215, 0, 0.2);
-  }
-  50% {
-    box-shadow: 0 0 35px rgba(255, 215, 0, 0.7), 0 0 70px rgba(255, 215, 0, 0.3);
-  }
-}
-
-.animate-gold-glow {
-  animation: gold-glow 2s ease-in-out infinite;
-}
-
-/* Score text glow */
-.score-glow-legend {
-  text-shadow: 0 0 20px rgba(255, 215, 0, 0.8), 0 0 40px rgba(255, 215, 0, 0.4);
-}
-
-.score-glow-elite {
-  text-shadow: 0 0 15px rgba(46, 74, 59, 0.6), 0 0 30px rgba(46, 74, 59, 0.3);
-}
-
-.score-glow-proven {
-  text-shadow: 0 0 12px rgba(34, 197, 94, 0.5), 0 0 24px rgba(34, 197, 94, 0.2);
-}
-
-/* Badge glow effects */
-.badge-glow-legend {
-  box-shadow: 0 0 12px rgba(255, 215, 0, 0.4);
-}
-
-.badge-glow-kol {
-  box-shadow: 0 0 12px rgba(251, 191, 36, 0.5);
-}
-
-.badge-glow-bronze {
-  box-shadow: 0 0 10px rgba(180, 83, 9, 0.3);
-}
-
-.badge-glow-silver {
-  box-shadow: 0 0 12px rgba(148, 163, 184, 0.4);
-}
-
-.badge-glow-gold {
-  box-shadow: 0 0 15px rgba(250, 204, 21, 0.5);
-}
-
-.badge-glow-platinum {
-  box-shadow: 0 0 18px rgba(45, 212, 191, 0.5);
-}
-
-.badge-glow-diamond {
-  box-shadow: 0 0 20px rgba(236, 72, 153, 0.6);
-}
-
-/* Tier-specific progress bar styles */
-.progress-legend {
-  background: linear-gradient(90deg, #FFD700 0%, #FFF8DC 50%, #FFD700 100%);
-  background-size: 200% 100%;
-  animation: shimmer 2s linear infinite;
-}
-
-.progress-elite {
-  background: linear-gradient(90deg, #7c3aed 0%, #a855f7 50%, #7c3aed 100%);
-  background-size: 200% 100%;
-  animation: gradient-x 3s ease infinite;
-}
-
-.progress-proven {
-  background: linear-gradient(90deg, #16a34a 0%, #22c55e 50%, #16a34a 100%);
-  background-size: 200% 100%;
-  animation: gradient-x 4s ease infinite;
-}
-
-.progress-builder {
-  background: linear-gradient(90deg, #2563eb 0%, #3b82f6 50%, #2563eb 100%);
-}
-
-/* Floating animation for decorative elements */
-@keyframes float {
-  0%, 100% {
-    transform: translateY(0) rotate(var(--float-rotate, 0deg));
-  }
-  50% {
-    transform: translateY(-8px) rotate(var(--float-rotate, 0deg));
-  }
-}
-
-.animate-float {
-  animation: float 3s ease-in-out infinite;
-}
-
-.animate-float-delayed {
-  animation: float 3s ease-in-out infinite;
-  animation-delay: 1.5s;
-}
-
-/* Green wave animation for How It Works cards */
-@keyframes green-wave-border {
-  0%, 100% {
-    border-color: var(--border);
-    box-shadow: 8px 8px 0px 0px var(--border);
-  }
-  20%, 40% {
-    border-color: var(--accent);
-    box-shadow: 8px 8px 0px 0px var(--accent), 0 0 30px rgba(74, 222, 128, 0.5);
-  }
-}
-
-.how-it-works-card {
-  position: relative;
-  overflow: visible;
-  border: 2px solid var(--border) !important;
-  box-shadow: 8px 8px 0px 0px var(--border);
-}
-
-.how-it-works-card:nth-child(1) {
-  animation: green-wave-border 4s ease-in-out infinite;
-}
-
-.how-it-works-card:nth-child(2) {
-  animation: green-wave-border 4s ease-in-out infinite;
-  animation-delay: 1s;
-}
-
-.how-it-works-card:nth-child(3) {
-  animation: green-wave-border 4s ease-in-out infinite;
-  animation-delay: 2s;
-}
-
-/* Rotating border light animation for extension image */
-@keyframes border-light-rotate {
-  0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
-  }
-}
-
-@keyframes border-spin {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
-  }
-}
-
-.extension-image-wrapper {
-  position: relative;
-  padding: 3px;
-  border-radius: 16px;
-  overflow: hidden;
-}
-
-.extension-image-wrapper::before {
-  content: '';
-  position: absolute;
-  inset: -50%;
-  background: conic-gradient(
-    from 0deg,
-    transparent 0deg,
-    transparent 60deg,
-    var(--accent) 120deg,
-    rgba(74, 222, 128, 0.8) 180deg,
-    var(--accent) 240deg,
-    transparent 300deg,
-    transparent 360deg
-  );
-  animation: border-spin 4s linear infinite;
-}
-
-.extension-image-wrapper::after {
-  content: '';
-  position: absolute;
-  inset: 3px;
-  background: var(--inverted-bg);
-  border-radius: 13px;
-  z-index: 1;
-}
-
-.extension-image-wrapper img {
-  position: relative;
-  z-index: 2;
-  border-radius: 12px;
-}
-
-/* ========== TOKEN PAGE EFFECTS ========== */
-
-/* Animated gradient text for $KARMA */
-@keyframes gradient-shift {
-  0%, 100% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-}
-
-.token-title-gradient {
-  background: linear-gradient(
-    90deg,
-    var(--accent) 0%,
-    #86efac 25%,
-    var(--accent) 50%,
-    #22c55e 75%,
-    var(--accent) 100%
-  );
-  background-size: 200% auto;
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  animation: gradient-shift 3s ease infinite;
-}
-
-/* Pulsing glow for stat cards */
-@keyframes stat-pulse {
-  0%, 100% {
-    box-shadow: 0 0 0 0 transparent;
-  }
-  50% {
-    box-shadow: 0 0 20px rgba(74, 222, 128, 0.15);
-  }
-}
-
-.stat-card-glow {
-  animation: stat-pulse 3s ease-in-out infinite;
-}
-
-.stat-card-glow:nth-child(1) { animation-delay: 0s; }
-.stat-card-glow:nth-child(2) { animation-delay: 0.5s; }
-.stat-card-glow:nth-child(3) { animation-delay: 1s; }
-.stat-card-glow:nth-child(4) { animation-delay: 1.5s; }
-
-/* Animated border for airdrop cards */
-@keyframes border-glow-pulse {
-  0%, 100% {
-    border-color: rgba(255, 255, 255, 0.1);
-    box-shadow: inset 0 0 0 0 transparent;
-  }
-  50% {
-    border-color: rgba(74, 222, 128, 0.4);
-    box-shadow: inset 0 0 15px rgba(74, 222, 128, 0.1);
-  }
-}
-
-.airdrop-card-animate {
-  animation: border-glow-pulse 4s ease-in-out infinite;
-}
-
-.airdrop-card-animate:nth-child(1) { animation-delay: 0s; }
-.airdrop-card-animate:nth-child(2) { animation-delay: 0.5s; }
-.airdrop-card-animate:nth-child(3) { animation-delay: 1s; }
-.airdrop-card-animate:nth-child(4) { animation-delay: 1.5s; }
-
-/* Floating icon animation */
-@keyframes icon-float {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-4px);
-  }
-}
-
-.icon-float {
-  animation: icon-float 2s ease-in-out infinite;
-}
-
-/* Spinning coin animation for hero */
-@keyframes coin-spin {
-  0% {
-    transform: rotateY(0deg);
-  }
-  100% {
-    transform: rotateY(360deg);
-  }
-}
-
-.coin-spin {
-  animation: coin-spin 4s linear infinite;
-  transform-style: preserve-3d;
-}
-
-/* Glowing accent box */
-@keyframes accent-box-glow {
-  0%, 100% {
-    box-shadow: 4px 4px 0px 0px var(--border), 0 0 0 0 transparent;
-  }
-  50% {
-    box-shadow: 4px 4px 0px 0px var(--border), 0 0 25px rgba(74, 222, 128, 0.3);
-  }
-}
-
-.accent-box-glow {
-  animation: accent-box-glow 3s ease-in-out infinite;
-}
-
-/* Feature card hover spotlight */
-.feature-card-spotlight {
-  position: relative;
-  overflow: hidden;
-}
-
-.feature-card-spotlight::before {
-  content: '';
-  position: absolute;
-  top: -100%;
-  left: -100%;
-  width: 60px;
-  height: 200%;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(74, 222, 128, 0.15),
-    transparent
-  );
-  transform: rotate(25deg);
-  transition: all 0.5s ease;
-}
-
-.feature-card-spotlight:hover::before {
-  left: 150%;
-}
-
-/* Button press effect */
-.btn-press {
-  transition: all 0.15s ease;
-}
-
-.btn-press:active {
-  transform: translate(2px, 2px);
-  box-shadow: none !important;
-}
-
-/* Grid pattern for backgrounds - subtle, non-distracting */
-.grid-pattern {
-  background-image:
-    linear-gradient(rgba(251, 240, 223, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(251, 240, 223, 0.05) 1px, transparent 1px);
-  background-size: 32px 32px;
-}
-
-/* Pixel art scanlines effect */
-.scanlines::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  background: repeating-linear-gradient(
-    0deg,
-    rgba(0, 0, 0, 0.15),
-    rgba(0, 0, 0, 0.15) 1px,
-    transparent 1px,
-    transparent 2px
-  );
-}
-
-/* ========================================
-   MOBILE OPTIMIZATIONS
-   ======================================== */
-
-/* Minimum touch target size (44x44px) */
-@layer base {
+  /* Minimum touch target size (44x44px) */
   button,
   a,
   [role="button"],
@@ -706,7 +64,468 @@ body {
   }
 }
 
-/* Better tap feedback for mobile */
+/* ==========================================
+   COLOR PALETTE — Monochrome + FLAGGED Red
+   ========================================== */
+
+:root {
+  --black:     #000000;
+  --black-1:   #0a0a0a;
+  --black-2:   #111111;
+  --black-3:   #1a1a1a;
+  --white:     #ffffff;
+  --white-90:  #e5e5e5;
+  --white-60:  #999999;
+  --white-40:  #666666;
+  --white-20:  #333333;
+  --red:       #ff0000;
+}
+
+/* ==========================================
+   TAILWIND v4 THEME MAPPING
+   ========================================== */
+
+@theme inline {
+  /* Palette colors */
+  --color-black: var(--black);
+  --color-black-1: var(--black-1);
+  --color-black-2: var(--black-2);
+  --color-black-3: var(--black-3);
+  --color-white: var(--white);
+  --color-white-90: var(--white-90);
+  --color-white-60: var(--white-60);
+  --color-white-40: var(--white-40);
+  --color-white-20: var(--white-20);
+  --color-red: var(--red);
+
+  /* Semantic aliases */
+  --color-background: var(--black);
+  --color-foreground: var(--white);
+  --color-card: var(--black-2);
+  --color-card-hover: var(--black-3);
+  --color-surface: var(--black-1);
+  --color-border: var(--white-20);
+  --color-text-muted: var(--white-60);
+
+  /* Tier colors — monochrome intensity scale + FLAGGED red */
+  --color-tier-sovereign: var(--white);
+  --color-tier-cleared: #f2f2f2;
+  --color-tier-operative: #d9d9d9;
+  --color-tier-vetted: #bfbfbf;
+  --color-tier-tracked: #999999;
+  --color-tier-filed: #737373;
+  --color-tier-flagged: var(--red);
+  --color-tier-ghost: #4d4d4d;
+
+  /* Typography */
+  --font-mono: var(--font-jetbrains), monospace;
+}
+
+/* ==========================================
+   BODY
+   ========================================== */
+
+body {
+  background-color: var(--black);
+  color: var(--white);
+  font-family: var(--font-jetbrains), monospace;
+}
+
+/* ==========================================
+   SCROLLBAR — Thin monochrome
+   ========================================== */
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--white-20);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--white-40);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--white);
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--white-40) var(--white-20);
+}
+
+/* ==========================================
+   SELECTION
+   ========================================== */
+
+::selection {
+  background-color: var(--white);
+  color: var(--black);
+}
+
+/* ==========================================
+   KEYFRAMES
+   ========================================== */
+
+/* Scanline — horizontal line scrolling down the screen */
+@keyframes scanline {
+  0% {
+    transform: translateY(-100%);
+  }
+  100% {
+    transform: translateY(100vh);
+  }
+}
+
+/* Terminal cursor blink */
+@keyframes cursor-blink {
+  0%, 49% {
+    opacity: 1;
+  }
+  50%, 100% {
+    opacity: 0;
+  }
+}
+
+/* CRT flicker on page load */
+@keyframes crt-flicker {
+  0% {
+    opacity: 0.85;
+  }
+  5% {
+    opacity: 1;
+  }
+  10% {
+    opacity: 0.9;
+  }
+  15% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+/* SOVEREIGN tier pulsing white glow */
+@keyframes sovereign-glow {
+  0%, 100% {
+    box-shadow: 0 0 8px rgba(255, 255, 255, 0.3), 0 0 20px rgba(255, 255, 255, 0.15);
+  }
+  50% {
+    box-shadow: 0 0 16px rgba(255, 255, 255, 0.6), 0 0 40px rgba(255, 255, 255, 0.25);
+  }
+}
+
+/* FLAGGED tier pulsing red glow */
+@keyframes flagged-pulse {
+  0%, 100% {
+    box-shadow: 0 0 8px rgba(255, 0, 0, 0.3), 0 0 20px rgba(255, 0, 0, 0.15);
+  }
+  50% {
+    box-shadow: 0 0 16px rgba(255, 0, 0, 0.6), 0 0 40px rgba(255, 0, 0, 0.25);
+  }
+}
+
+/* Page fade in */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Stagger fade in up */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ==========================================
+   ANIMATION CLASSES
+   ========================================== */
+
+.animate-sovereign-glow {
+  animation: sovereign-glow 2s ease-in-out infinite;
+}
+
+.animate-flagged-pulse {
+  animation: flagged-pulse 1.5s ease-in-out infinite;
+}
+
+.animate-cursor-blink {
+  animation: cursor-blink 1s step-end infinite;
+}
+
+.animate-crt-flicker {
+  animation: crt-flicker 0.4s ease-out forwards;
+}
+
+.page-transition {
+  animation: fadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Stagger children animation */
+.stagger-children > * {
+  animation: fadeInUp 0.4s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.stagger-children > *:nth-child(1) { animation-delay: 0.05s; }
+.stagger-children > *:nth-child(2) { animation-delay: 0.1s; }
+.stagger-children > *:nth-child(3) { animation-delay: 0.15s; }
+.stagger-children > *:nth-child(4) { animation-delay: 0.2s; }
+.stagger-children > *:nth-child(5) { animation-delay: 0.25s; }
+.stagger-children > *:nth-child(6) { animation-delay: 0.3s; }
+
+/* ==========================================
+   UTILITY CLASSES — Terminal Aesthetic
+   ========================================== */
+
+/* 1px solid border in muted white */
+.terminal-border {
+  border: 1px solid var(--white-20);
+}
+
+/* Card with terminal styling */
+.terminal-card {
+  background-color: var(--black-2);
+  border: 1px solid var(--white-20);
+}
+
+/* Subtle white box-shadow glow */
+.terminal-glow {
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.1), 0 0 2px rgba(255, 255, 255, 0.2);
+}
+
+/* Scanline overlay as pseudo-element */
+.scanline-overlay {
+  position: relative;
+  overflow: hidden;
+}
+
+.scanline-overlay::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: linear-gradient(
+    180deg,
+    transparent,
+    rgba(255, 255, 255, 0.04),
+    transparent
+  );
+  pointer-events: none;
+  z-index: 50;
+  animation: scanline 4s linear infinite;
+}
+
+/* Static scanlines texture (CRT effect) */
+.scanlines {
+  position: relative;
+}
+
+.scanlines::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(255, 255, 255, 0.02),
+    rgba(255, 255, 255, 0.02) 1px,
+    transparent 1px,
+    transparent 2px
+  );
+}
+
+/* Grid pattern background */
+.grid-pattern {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+/* ==========================================
+   TIER STYLING — Intensity-based
+   ========================================== */
+
+/* SOVEREIGN: full white, double border, pulsing glow */
+.tier-sovereign {
+  color: var(--white);
+  border: 2px double var(--white);
+  animation: sovereign-glow 2s ease-in-out infinite;
+}
+
+/* CLEARED: 95% white, solid 2px border, subtle glow */
+.tier-cleared {
+  color: #f2f2f2;
+  border: 2px solid #f2f2f2;
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.1);
+}
+
+/* OPERATIVE: 85% white, solid 1px border */
+.tier-operative {
+  color: #d9d9d9;
+  border: 1px solid #d9d9d9;
+}
+
+/* VETTED: 75% white, solid 1px #666 border */
+.tier-vetted {
+  color: #bfbfbf;
+  border: 1px solid var(--white-40);
+}
+
+/* TRACKED: 60% white, dashed border */
+.tier-tracked {
+  color: #999999;
+  border: 1px dashed #999999;
+}
+
+/* FILED: 45% white, dotted border */
+.tier-filed {
+  color: #737373;
+  border: 1px dotted #737373;
+}
+
+/* FLAGGED: red text, red border, red pulse */
+.tier-flagged {
+  color: var(--red);
+  border: 1px solid var(--red);
+  animation: flagged-pulse 1.5s ease-in-out infinite;
+}
+
+/* GHOST: 30% white, no border, faded */
+.tier-ghost {
+  color: #4d4d4d;
+  border: none;
+  opacity: 0.6;
+}
+
+/* ==========================================
+   INTERACTION EFFECTS — Monochrome
+   ========================================== */
+
+/* Smooth card hover lift */
+.hover-lift {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.05);
+}
+
+/* Scale effect for buttons */
+.hover-scale {
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hover-scale:hover {
+  transform: scale(1.02);
+}
+
+.hover-scale:active {
+  transform: scale(0.98);
+}
+
+/* Link underline animation */
+.link-underline {
+  position: relative;
+  text-decoration: none;
+}
+
+.link-underline::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 1px;
+  background-color: var(--white);
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.link-underline:hover::after {
+  width: 100%;
+}
+
+/* Interactive card */
+.interactive-card {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.interactive-card:hover {
+  border-color: var(--white-40);
+  background-color: var(--black-3);
+}
+
+.interactive-card:active {
+  transform: translateY(0);
+}
+
+/* Smooth transitions */
+.shadow-smooth {
+  transition: box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.bg-smooth {
+  transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.text-smooth {
+  transition: color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.opacity-smooth {
+  transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Button press */
+.btn-press {
+  transition: all 0.15s ease;
+}
+
+.btn-press:active {
+  transform: translate(1px, 1px);
+}
+
+/* Hover glow — white */
+.hover-glow {
+  transition: box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hover-glow:hover {
+  box-shadow: 0 0 16px rgba(255, 255, 255, 0.12);
+}
+
+/* ==========================================
+   MOBILE OPTIMIZATIONS
+   ========================================== */
+
 @media (hover: none) and (pointer: coarse) {
   .hover-lift:hover,
   .hover-scale:hover {
@@ -718,23 +537,11 @@ body {
     transform: scale(0.98);
   }
 
-  /* Disable hover-only animations on touch */
-  .how-it-works-card:hover {
-    transform: none !important;
-  }
-
-  /* Better active states */
   button:active,
   a:active,
   [role="button"]:active {
     opacity: 0.8;
   }
-}
-
-/* Prevent text size adjustment on orientation change */
-html {
-  -webkit-text-size-adjust: 100%;
-  text-size-adjust: 100%;
 }
 
 /* Hide scrollbar on mobile for horizontal scroll areas */
@@ -758,11 +565,11 @@ html {
   }
 }
 
-/* ========================================
-   ACCESSIBILITY IMPROVEMENTS
-   ======================================== */
+/* ==========================================
+   ACCESSIBILITY
+   ========================================== */
 
-/* Reduced motion - disable animations for users who prefer it */
+/* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -772,56 +579,49 @@ html {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
-  
-  .animate-glow-pulse,
-  .animate-gold-glow,
-  .animate-gradient-x,
-  .animate-shimmer,
-  .animate-float,
-  .animate-float-delayed,
-  .icon-float,
-  .coin-spin,
-  .accent-box-glow,
-  .stat-card-glow,
-  .airdrop-card-animate,
+
+  .animate-sovereign-glow,
+  .animate-flagged-pulse,
+  .animate-cursor-blink,
+  .animate-crt-flicker,
+  .scanline-overlay::after,
   .stagger-children > *,
   .page-transition {
     animation: none !important;
   }
 
-  /* Disable smooth scrolling for reduced motion preference */
   html {
     scroll-behavior: auto !important;
   }
 }
 
-/* Focus states - visible focus rings for keyboard navigation */
+/* Focus states — monochrome */
 .focus-ring:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px var(--cream), 0 0 0 4px var(--accent);
+  box-shadow: 0 0 0 2px var(--black), 0 0 0 4px var(--white);
 }
 
-/* Apply focus rings to interactive elements */
 a:focus-visible,
 button:focus-visible,
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible,
 [tabindex]:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--white);
   outline-offset: 2px;
 }
 
-/* Skip to main content link for screen readers */
+/* Skip to main content */
 .skip-link {
   position: absolute;
   top: -100%;
   left: 50%;
   transform: translateX(-50%);
-  background: var(--dark);
-  color: var(--cream);
+  background: var(--white);
+  color: var(--black);
   padding: 0.75rem 1.5rem;
   font-weight: bold;
+  font-family: var(--font-jetbrains), monospace;
   z-index: 9999;
   transition: top 0.2s;
 }
@@ -830,7 +630,7 @@ textarea:focus-visible,
   top: 0.5rem;
 }
 
-/* Screen reader only - visually hidden but accessible */
+/* Screen reader only */
 .sr-only {
   position: absolute;
   width: 1px;
@@ -841,179 +641,4 @@ textarea:focus-visible,
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
-}
-
-/* Ensure sufficient color contrast for muted text */
-.text-muted-accessible {
-  color: var(--dark-medium);
-}
-
-/* ========================================
-   SMOOTH INTERACTIONS
-   ======================================== */
-
-/* Smooth card hover lift effect */
-.hover-lift {
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-              box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.hover-lift:hover {
-  transform: translateY(-4px);
-}
-
-/* Smooth scale effect for buttons and interactive elements */
-.hover-scale {
-  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.hover-scale:hover {
-  transform: scale(1.02);
-}
-
-.hover-scale:active {
-  transform: scale(0.98);
-}
-
-/* Smooth link underline animation */
-.link-underline {
-  position: relative;
-  text-decoration: none;
-}
-
-.link-underline::after {
-  content: '';
-  position: absolute;
-  bottom: -2px;
-  left: 0;
-  width: 0;
-  height: 2px;
-  background-color: var(--accent);
-  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.link-underline:hover::after {
-  width: 100%;
-}
-
-/* Smooth shadow transition for cards */
-.shadow-smooth {
-  transition: box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-              border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* Smooth background color transitions */
-.bg-smooth {
-  transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* Interactive card base styles - combines multiple effects */
-.interactive-card {
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-              box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-              border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-              background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.interactive-card:hover {
-  transform: translateY(-2px) translateX(2px);
-}
-
-.interactive-card:active {
-  transform: translateY(0) translateX(0);
-}
-
-/* Smooth opacity transitions for icons and images */
-.opacity-smooth {
-  transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* Magnetic button effect - subtle pull towards cursor */
-.magnetic {
-  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* Glow on hover for special elements */
-.hover-glow {
-  transition: box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.hover-glow:hover {
-  box-shadow: 0 0 20px rgba(74, 222, 128, 0.3);
-}
-
-/* Smooth text color transitions */
-.text-smooth {
-  transition: color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* Ripple effect container */
-.ripple {
-  position: relative;
-  overflow: hidden;
-}
-
-.ripple::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 0;
-  height: 0;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.3);
-  transform: translate(-50%, -50%);
-  transition: width 0.4s ease, height 0.4s ease, opacity 0.4s ease;
-  opacity: 0;
-}
-
-.ripple:active::after {
-  width: 200px;
-  height: 200px;
-  opacity: 1;
-  transition: 0s;
-}
-
-/* Smooth border radius transitions */
-.radius-smooth {
-  transition: border-radius 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* Page transition fade */
-.page-transition {
-  animation: fadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* Stagger children animation */
-.stagger-children > * {
-  animation: fadeInUp 0.4s cubic-bezier(0.4, 0, 0.2, 1) both;
-}
-
-.stagger-children > *:nth-child(1) { animation-delay: 0.05s; }
-.stagger-children > *:nth-child(2) { animation-delay: 0.1s; }
-.stagger-children > *:nth-child(3) { animation-delay: 0.15s; }
-.stagger-children > *:nth-child(4) { animation-delay: 0.2s; }
-.stagger-children > *:nth-child(5) { animation-delay: 0.25s; }
-.stagger-children > *:nth-child(6) { animation-delay: 0.3s; }
-
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
 }

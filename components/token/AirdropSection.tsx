@@ -18,12 +18,12 @@ export function AirdropSection() {
           <div className="w-12 h-12 bg-accent flex items-center justify-center border-2 border-accent">
             <Gift size={24} className="text-cream" />
           </div>
-          <h2 className="text-3xl md:text-4xl font-black font-display-mock text-inverted-text">
+          <h2 className="text-3xl md:text-4xl font-mono font-extrabold uppercase text-white">
             Airdrop
           </h2>
         </div>
         <p className="text-inverted-muted mb-10 text-lg max-w-2xl">
-          Rewarding the builders and early believers who make DevCred possible.
+          Rewarding the builders and early believers who make Blacklist possible.
         </p>
 
         {/* Eligibility Cards */}
@@ -62,7 +62,7 @@ export function AirdropSection() {
             </div>
             <div className="md:ml-auto">
               <Link href="/login">
-                <Button variant="accent">
+                <Button variant="primary">
                   Claim Profile to Qualify <ArrowRight size={18} />
                 </Button>
               </Link>

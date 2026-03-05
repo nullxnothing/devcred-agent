@@ -136,9 +136,9 @@ export async function scanWallet(
       walletAddress,
       tokensCreated: [],
       totalScore: 0,
-      tier: 'unverified',
-      tierName: 'Unverified',
-      tierColor: 'var(--score-unverified)',
+      tier: 'ghost',
+      tierName: 'GHOST',
+      tierColor: 'var(--color-tier-ghost)',
       breakdown: {
         tokenCount: 0,
         migrationCount: 0,

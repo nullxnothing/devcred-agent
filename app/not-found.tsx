@@ -2,61 +2,51 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Home, Search, ArrowLeft } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
+import { ArrowLeft } from 'lucide-react';
 
 export default function NotFound() {
   const router = useRouter();
 
   return (
-    <div className="min-h-screen bg-cream flex items-center justify-center px-6 py-20 relative overflow-hidden">
-      {/* Background pattern */}
-      <div
-        className="absolute inset-0 opacity-[0.04]"
-        style={{
-          backgroundImage:
-            'linear-gradient(var(--border) 1px, transparent 1px), linear-gradient(90deg, var(--border) 1px, transparent 1px)',
-          backgroundSize: '32px 32px',
-        }}
-      />
+    <div className="min-h-screen bg-black flex items-center justify-center px-6 py-20 relative overflow-hidden">
+      <div className="absolute inset-0 grid-pattern pointer-events-none" />
 
       <div className="relative z-10 text-center max-w-lg">
-        {/* 404 Display */}
         <div className="mb-8">
-          <div className="text-[150px] md:text-[200px] font-black font-display-mock leading-none text-border/30 select-none">
+          <div className="text-[120px] md:text-[180px] font-mono font-extrabold leading-none text-white-20 select-none">
             404
           </div>
-          <div className="mt-[-40px] md:mt-[-60px]">
-            <h1 className="text-3xl md:text-4xl font-black font-display-mock text-dark mb-4">
-              PAGE NOT <span className="text-accent">FOUND</span>
+          <div className="mt-[-30px] md:mt-[-50px]">
+            <h1 className="text-2xl md:text-3xl font-mono font-extrabold uppercase text-white mb-4">
+              RECORD NOT FOUND
             </h1>
           </div>
         </div>
 
-        <p className="text-lg text-text-muted mb-8 max-w-md mx-auto">
-          Looks like this page got rugged. The dev probably dumped and ran.
+        <p className="text-sm font-mono text-white-40 mb-8 max-w-md mx-auto">
+          &gt; ERROR: The requested file does not exist in our surveillance database.
         </p>
 
-        {/* Actions */}
         <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
-          <Link href="/">
-            <Button variant="accent" className="w-full sm:w-auto">
-              <Home size={18} /> Go Home
-            </Button>
+          <Link
+            href="/"
+            className="px-5 py-3 bg-white text-black font-mono font-bold uppercase text-xs tracking-widest border border-white hover:bg-white-90 transition-colors"
+          >
+            [ HOME ]
           </Link>
-          <Link href="/leaderboard">
-            <Button variant="secondary" className="w-full sm:w-auto">
-              <Search size={18} /> View Leaderboard
-            </Button>
+          <Link
+            href="/leaderboard"
+            className="px-5 py-3 bg-transparent text-white-60 font-mono font-bold uppercase text-xs tracking-widest border border-white-20 hover:text-white hover:border-white transition-colors"
+          >
+            [ RANKINGS ]
           </Link>
         </div>
 
-        {/* Back link */}
         <button
           onClick={() => router.back()}
-          className="inline-flex items-center gap-2 text-sm font-medium text-text-muted hover:text-accent transition-colors"
+          className="inline-flex items-center gap-2 text-xs font-mono text-white-40 hover:text-white transition-colors"
         >
-          <ArrowLeft size={16} /> Go back to previous page
+          <ArrowLeft size={14} /> GO BACK
         </button>
       </div>
     </div>

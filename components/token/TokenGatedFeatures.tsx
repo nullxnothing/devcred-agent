@@ -16,7 +16,7 @@ export function TokenGatedFeatures() {
           <div className="w-12 h-12 bg-accent/10 flex items-center justify-center border-2 border-accent/30">
             <Lock size={24} className="text-accent" />
           </div>
-          <h2 className="text-3xl md:text-4xl font-black font-display-mock text-dark">
+          <h2 className="text-3xl md:text-4xl font-mono font-extrabold uppercase text-white">
             Holder Benefits
           </h2>
         </div>

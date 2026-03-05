@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getUserByTwitterHandle, getOrCreateSystemUser, getTokensForUserWallets } from '@/lib/db';
+import { getUserByTwitterHandle, getUserByAnyWallet, getTokensForUserWallets } from '@/lib/db';
 import { PublicKey } from '@solana/web3.js';
+import { apiOk, apiError, withCache } from '@/lib/api-response';
 
 interface RouteContext {
   params: Promise<{ handle: string }>;
@@ -21,18 +22,18 @@ export async function GET(
     // Try to find user by Twitter handle first
     let user = await getUserByTwitterHandle(decodedHandle);
 
-    // If not found, check if it's a wallet address
+    // If not found, check if it's a wallet address (lookup only, no auto-create)
     if (!user) {
       try {
         new PublicKey(decodedHandle);
-        user = await getOrCreateSystemUser(decodedHandle);
+        user = await getUserByAnyWallet(decodedHandle);
       } catch {
         // Not a valid Solana address
       }
     }
 
     if (!user) {
-      return NextResponse.json({ tokens: [] }, { status: 200 });
+      return withCache(apiOk({ tokens: [] }), 60, 120);
     }
 
     // Get tokens for user
@@ -50,9 +51,10 @@ export async function GET(
       score: token.score,
     }));
 
-    return NextResponse.json({ tokens: badgeTokens }, { status: 200 });
+    // Cache badges for 60 seconds, stale for 120 more
+    return withCache(apiOk({ tokens: badgeTokens }), 60, 120);
   } catch (error) {
     console.error('[GET /api/profile/[handle]/badges] Error:', error);
-    return NextResponse.json({ tokens: [], error: 'Failed to fetch badges' }, { status: 500 });
+    return apiError(error);
   }
 }

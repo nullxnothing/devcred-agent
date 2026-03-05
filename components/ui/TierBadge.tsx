@@ -1,82 +1,36 @@
 'use client';
 
-import { Crown, Zap, Shield, Star, CheckCircle, AlertTriangle, HelpCircle } from 'lucide-react';
+import { ShieldCheck, ScanEye, Crosshair, Fingerprint, Radio, FileSearch, TriangleAlert, CircleHelp } from 'lucide-react';
 import { DevTier } from '@/lib/scoring';
 
 interface TierBadgeProps {
   tier: DevTier | string;
   tierName: string;
-  tierColor: string;
+  tierColor?: string;
   size?: 'sm' | 'md' | 'lg';
   showGlow?: boolean;
 }
 
-// Icons for each tier - using cream for contrast on colored backgrounds (theme-aware)
 const tierIcons: Record<string, React.ReactNode> = {
-  legend: <Crown size={12} className="text-cream" />,
-  elite: <Zap size={12} className="text-cream/90" />,
-  rising_star: <Star size={12} className="text-cream/90" />,
-  proven: <Shield size={12} className="text-cream/90" />,
-  builder: <Star size={12} className="text-cream/90" />,
-  verified: <CheckCircle size={12} className="text-cream/80" />,
-  penalized: <AlertTriangle size={12} className="text-cream/90" />,
-  unverified: <HelpCircle size={12} className="text-dark/70" />,
+  sovereign: <ShieldCheck size={12} />,
+  cleared: <ScanEye size={12} />,
+  operative: <Crosshair size={12} />,
+  vetted: <Fingerprint size={12} />,
+  tracked: <Radio size={12} />,
+  filed: <FileSearch size={12} />,
+  flagged: <TriangleAlert size={12} />,
+  ghost: <CircleHelp size={12} />,
 };
 
-const tierStyles: Record<string, {
-  bg: string;
-  shadow: string;
-  textShadow: string;
-  border: string;
-}> = {
-  legend: {
-    bg: 'bg-score-legend',
-    shadow: 'badge-glow-legend',
-    textShadow: '',
-    border: 'border-score-legend/80',
-  },
-  elite: {
-    bg: 'bg-score-elite',
-    shadow: '',
-    textShadow: '',
-    border: 'border-score-elite/80',
-  },
-  rising_star: {
-    bg: 'bg-score-rising',
-    shadow: '',
-    textShadow: '',
-    border: 'border-score-rising/80',
-  },
-  proven: {
-    bg: 'bg-score-proven',
-    shadow: '',
-    textShadow: '',
-    border: 'border-score-proven/80',
-  },
-  builder: {
-    bg: 'bg-score-builder',
-    shadow: '',
-    textShadow: '',
-    border: 'border-score-builder/80',
-  },
-  verified: {
-    bg: 'bg-score-verified',
-    shadow: '',
-    textShadow: '',
-    border: 'border-score-verified/80',
-  },
-  penalized: {
-    bg: 'bg-score-penalized',
-    shadow: '',
-    textShadow: '',
-    border: 'border-score-penalized/80',
-  },
-  unverified: {
-    bg: 'bg-score-unverified',
-    shadow: '',
-    textShadow: '',
-    border: 'border-score-unverified/80',
-  },
+const tierClasses: Record<string, string> = {
+  sovereign: 'tier-sovereign bg-black-2',
+  cleared: 'tier-cleared bg-black-2',
+  operative: 'tier-operative bg-black-2',
+  vetted: 'tier-vetted bg-black-2',
+  tracked: 'tier-tracked bg-black-2',
+  filed: 'tier-filed bg-black-2',
+  flagged: 'tier-flagged bg-black-2',
+  ghost: 'tier-ghost bg-black-2',
 };
 
 const sizeClasses = {
@@ -86,30 +40,23 @@ const sizeClasses = {
 };
 
 export function TierBadge({ tier, tierName, size = 'md', showGlow = true }: TierBadgeProps) {
-  const normalizedTier = tier.toLowerCase().replace(' ', '_') as keyof typeof tierStyles;
-  const style = tierStyles[normalizedTier] || tierStyles.unverified;
-  const icon = tierIcons[normalizedTier] || tierIcons.unverified;
-  // Only legend tier gets glow effect
-  const isLegend = normalizedTier === 'legend';
+  const normalizedTier = tier.toLowerCase().replace(' ', '_') as keyof typeof tierClasses;
+  const classes = tierClasses[normalizedTier] || tierClasses.ghost;
+  const icon = tierIcons[normalizedTier] || tierIcons.ghost;
 
   return (
     <span
       className={`
         inline-flex items-center gap-1
         ${sizeClasses[size]}
-        ${style.bg}
-        ${showGlow && isLegend ? 'animate-gold-glow' : ''}
-        ${showGlow && isLegend ? style.shadow : ''}
-        border ${style.border}
-        font-bold uppercase tracking-wider
-        ${normalizedTier === 'unverified' ? 'text-dark' : 'text-cream'}
-        rounded-sm
+        ${classes}
+        font-mono font-bold uppercase tracking-widest
       `}
       role="status"
-      aria-label={`Developer tier: ${tierName}`}
+      aria-label={`Classification: ${tierName}`}
     >
       {icon}
-      {tierName}
+      [{tierName}]
     </span>
   );
 }

@@ -15,7 +15,6 @@ export const walletNonceRequestSchema = z.object({
 export const walletVerifyRequestSchema = z.object({
   walletAddress: solanaAddressSchema,
   signature: z.string().min(1, 'Signature is required'),
-  nonce: z.string().min(1, 'Nonce is required'),
 });
 
 export const walletConnectRequestSchema = z.object({

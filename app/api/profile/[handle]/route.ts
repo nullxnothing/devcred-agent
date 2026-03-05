@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import {
   getUserByTwitterHandle,
   getWalletsByUserId,
@@ -13,6 +13,7 @@ import {
 import { calculateDevScore, getTierInfo } from '@/lib/scoring';
 import { scanWalletQuick, MAX_AUTO_SCAN_TOKENS } from '@/lib/wallet-scan';
 import { PublicKey } from '@solana/web3.js';
+import { apiOk, apiNotFound, apiError, withCache } from '@/lib/api-response';
 
 export async function GET(
   request: NextRequest,
@@ -36,13 +37,17 @@ export async function GET(
       }
 
       if (isValidAddress) {
-        // This is a wallet search - get or create a system user
-        user = await getOrCreateSystemUser(cleanHandle);
+        // Look up existing user only — don't auto-create from unauthenticated requests
+        const { getUserByAnyWallet } = await import('@/lib/db');
+        user = await getUserByAnyWallet(cleanHandle);
+        if (!user) {
+          return apiNotFound('User', cleanHandle);
+        }
       }
     }
 
     if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      return apiNotFound('User', cleanHandle);
     }
 
     const wallets = await getWalletsByUserId(user.id);
@@ -131,41 +136,46 @@ export async function GET(
     const viewerIp = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip');
     recordProfileView(user.id, viewerIp || undefined).catch(() => {});
 
-    return NextResponse.json({
-      user: {
-        id: user.id,
-        twitterHandle: user.twitter_handle,
-        twitterName: user.twitter_name,
-        avatarUrl: user.avatar_url,
-        bio: user.bio,
-        isVerified: user.is_verified,
-        rank: newRank ?? user.rank,
-        createdAt: user.created_at,
-      },
-      score: {
-        total: devScore.score,
-        tier: devScore.tier,
-        tierName: tierInfo.name,
-        tierColor: tierInfo.color,
-        breakdown: devScore.breakdown,
-      },
-      wallets: wallets.map((w) => ({
-        address: w.address,
-        label: w.label,
-        isPrimary: w.is_primary,
-      })),
-      tokens: tokenScores,
-      stats: {
-        totalTokens: tokens.length,
-        migratedTokens: devScore.breakdown.migrationCount,
-        avgTokenScore: devScore.breakdown.averageTokenScore,
-        totalTokensFound: totalTokensFound || tokens.length,
-        tokensLimited,
-        maxAutoScanTokens: MAX_AUTO_SCAN_TOKENS,
-      },
-    });
+    // Cache profile data for 60 seconds, stale for 120 more
+    return withCache(
+      apiOk({
+        user: {
+          id: user.id,
+          twitterHandle: user.twitter_handle,
+          twitterName: user.twitter_name,
+          avatarUrl: user.avatar_url,
+          bio: user.bio,
+          isVerified: user.is_verified,
+          rank: newRank ?? user.rank,
+          createdAt: user.created_at,
+        },
+        score: {
+          total: devScore.score,
+          tier: devScore.tier,
+          tierName: tierInfo.name,
+          tierColor: tierInfo.color,
+          breakdown: devScore.breakdown,
+        },
+        wallets: wallets.map((w) => ({
+          address: w.address,
+          label: w.label,
+          isPrimary: w.is_primary,
+        })),
+        tokens: tokenScores,
+        stats: {
+          totalTokens: tokens.length,
+          migratedTokens: devScore.breakdown.migrationCount,
+          avgTokenScore: devScore.breakdown.averageTokenScore,
+          totalTokensFound: totalTokensFound || tokens.length,
+          tokensLimited,
+          maxAutoScanTokens: MAX_AUTO_SCAN_TOKENS,
+        },
+      }),
+      60,
+      120
+    );
   } catch (error) {
     console.error('Error fetching profile:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return apiError(error);
   }
 }

@@ -59,13 +59,13 @@ export function ProfileActions({ profileUserId, hasWallets }: ProfileActionsProp
       {showWalletConnect && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div
-            className="absolute inset-0 bg-dark/80 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
             onClick={() => setShowWalletConnect(false)}
           />
           <div className="relative w-full max-w-md">
             <WalletConnect
               onVerificationComplete={handleWalletVerified}
-              className="shadow-[8px_8px_0px_0px_var(--border)]"
+              className=""
             />
           </div>
         </div>
@@ -95,7 +95,7 @@ export function ConnectWalletButton({ profileUserId }: ConnectWalletButtonProps)
     return (
       <button
         onClick={() => router.push('/login')}
-        className="mt-4 text-accent font-bold underline hover:text-accent/80 transition-colors"
+        className="mt-4 text-white font-bold underline hover:text-white/80 transition-colors"
       >
         Sign in to connect a wallet
       </button>
@@ -110,7 +110,7 @@ export function ConnectWalletButton({ profileUserId }: ConnectWalletButtonProps)
     <>
       <button
         onClick={() => setShowWalletConnect(true)}
-        className="mt-4 text-accent font-bold underline hover:text-accent/80 transition-colors"
+        className="mt-4 text-white font-bold underline hover:text-white/80 transition-colors"
       >
         Connect a wallet to scan
       </button>
@@ -119,13 +119,13 @@ export function ConnectWalletButton({ profileUserId }: ConnectWalletButtonProps)
       {showWalletConnect && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div
-            className="absolute inset-0 bg-dark/80 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
             onClick={() => setShowWalletConnect(false)}
           />
           <div className="relative w-full max-w-md">
             <WalletConnect
               onVerificationComplete={handleWalletVerified}
-              className="shadow-[8px_8px_0px_0px_var(--border)]"
+              className=""
             />
           </div>
         </div>

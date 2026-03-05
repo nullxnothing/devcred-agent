@@ -3,6 +3,7 @@
 export * from './wallet-schemas';
 export * from './user-schemas';
 export * from './token-schemas';
+export * from './api-schemas';
 
 import { z } from 'zod';
 

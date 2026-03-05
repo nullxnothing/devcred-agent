@@ -26,8 +26,8 @@ export function Avatar({ src, alt, size = 'md', className = '', priority = false
   // Show fallback if no src or error loading
   if (!src || hasError) {
     return (
-      <div className={`${container} bg-cream border-2 border-dark/30 flex items-center justify-center ${className}`}>
-        <User className="w-1/2 h-1/2 text-dark/30" />
+      <div className={`${container} bg-black border-2 border-white/20 flex items-center justify-center ${className}`}>
+        <User className="w-1/2 h-1/2 text-white/30" />
       </div>
     );
   }

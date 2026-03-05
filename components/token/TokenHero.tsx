@@ -41,14 +41,14 @@ export function TokenHero() {
           <div className="w-14 h-14 bg-accent flex items-center justify-center border-2 border-border shadow-[4px_4px_0px_0px_var(--border)] accent-box-glow">
             <Coins size={28} className="text-cream coin-spin" />
           </div>
-          <h1 className="text-5xl md:text-8xl font-black font-display-mock token-title-gradient">
+          <h1 className="text-5xl md:text-8xl font-mono font-extrabold uppercase text-white">
             ${TOKEN_CONFIG.symbol}
           </h1>
         </div>
 
         <p className="text-lg md:text-xl max-w-2xl font-medium leading-relaxed text-text-muted mb-8">
-          The community token powering DevCred infrastructure. Fund API costs,
-          unlock premium features, and support the reputation ecosystem.
+          The community token powering Blacklist infrastructure. Fund API costs,
+          unlock premium features, and support the threat assessment ecosystem.
         </p>
 
         {/* Contract Address */}

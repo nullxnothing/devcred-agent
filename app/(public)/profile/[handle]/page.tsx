@@ -2,13 +2,14 @@ import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
 import { Suspense } from 'react';
 import { Wallet } from 'lucide-react';
-import { getProfileData } from '@/lib/data-fetching';
+import { getProfileHeader, getProfileData } from '@/lib/data-fetching';
 import { Avatar } from '@/components/ui/Avatar';
-import { ProfileActions, ConnectWalletButton, ShareButton, TokenCard, BadgeGrid, TwitterLink } from '@/components/profile';
+import { ProfileActions, ShareButton, TokenListStreaming, TokenListSkeleton, BadgesStreaming, BadgesSkeleton } from '@/components/profile';
 import { WalletList } from '@/components/wallet';
 import { AddressDisplay } from '@/components/ui/CopyButton';
 import { TierBadge } from '@/components/ui/TierBadge';
 import { KolBadge } from '@/components/ui/KolBadge';
+import { TwitterLink } from '@/components/profile';
 import { getDevScoreColor } from '@/lib/score-colors';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 
@@ -23,14 +24,14 @@ export async function generateMetadata({ params }: ProfilePageProps): Promise<Me
 
   if (!profile) {
     return {
-      title: 'Profile Not Found | DevKarma',
+      title: 'Subject Not Found | Blacklist',
     };
   }
 
   const { user, score, wallets, stats } = profile;
   const primaryWallet = wallets.find((w) => w.isPrimary) || wallets[0];
-  
-  const displayName = user.twitterName || (primaryWallet?.address ? `Dev ${primaryWallet.address.slice(0, 4)}...${primaryWallet.address.slice(-4)}` : 'Unknown Dev');
+
+  const displayName = user.twitterName || (primaryWallet?.address ? `Dev ${primaryWallet.address.slice(0, 4)}...${primaryWallet.address.slice(-4)}` : 'Unknown Subject');
   const displayHandle = user.twitterHandle || (primaryWallet?.address ? primaryWallet.address.slice(0, 12) : 'unknown');
 
   const ogParams = new URLSearchParams({
@@ -49,25 +50,25 @@ export async function generateMetadata({ params }: ProfilePageProps): Promise<Me
   const ogImageUrl = `/api/og/profile?${ogParams.toString()}`;
 
   return {
-    title: `${displayName} | DevKarma Score: ${score.total}`,
-    description: `${displayName} has a DevKarma score of ${score.total} (${score.tierName}). ${stats.totalTokens} token launches, ${stats.migratedTokens} migrations.`,
+    title: `${displayName} | Blacklist Score: ${score.total}`,
+    description: `${displayName} has a Blacklist score of ${score.total} (${score.tierName}). ${stats.totalTokens} token launches, ${stats.migratedTokens} migrations.`,
     openGraph: {
-      title: `${displayName} | DevKarma Score: ${score.total}`,
-      description: `DevKarma Score: ${score.total} | Tier: ${score.tierName} | ${stats.totalTokens} Launches`,
+      title: `${displayName} | Blacklist Score: ${score.total}`,
+      description: `Blacklist Score: ${score.total} | Tier: ${score.tierName} | ${stats.totalTokens} Launches`,
       images: [
         {
           url: ogImageUrl,
           width: 1200,
           height: 630,
-          alt: `${displayName}'s DevKarma Profile`,
+          alt: `${displayName}'s Blacklist Dossier`,
         },
       ],
       type: 'profile',
     },
     twitter: {
       card: 'summary_large_image',
-      title: `${user.twitterName} | DevKarma Score: ${score.total}`,
-      description: `DevKarma Score: ${score.total} | Tier: ${score.tierName} | ${stats.totalTokens} Launches`,
+      title: `${user.twitterName} | Blacklist Score: ${score.total}`,
+      description: `Blacklist Score: ${score.total} | Tier: ${score.tierName} | ${stats.totalTokens} Launches`,
       images: [ogImageUrl],
     },
   };
@@ -77,52 +78,54 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
   const { handle } = await params;
   const decodedHandle = decodeURIComponent(handle);
 
-  const profile = await getProfileData(decodedHandle);
+  // Fast header data with cached score
+  const header = await getProfileHeader(decodedHandle);
 
-  if (!profile) {
+  if (!header) {
     notFound();
   }
 
-  const { user, score, wallets, tokens, stats } = profile;
+  const { user, score, wallets, stats } = header;
   const primaryWallet = wallets.find((w) => w.isPrimary) || wallets[0];
-  
-  // Display names for wallet-first users
-  const displayName = user.twitterName || (primaryWallet?.address ? `Dev ${primaryWallet.address.slice(0, 4)}...${primaryWallet.address.slice(-4)}` : 'Unknown Dev');
+
+  const displayName = user.twitterName || (primaryWallet?.address ? `Dev ${primaryWallet.address.slice(0, 4)}...${primaryWallet.address.slice(-4)}` : 'Unknown Subject');
   const displayHandle = user.twitterHandle || (primaryWallet?.address ? primaryWallet.address.slice(0, 12) : 'unknown');
 
   return (
-    <div className="min-h-screen bg-cream">
+    <div className="min-h-screen bg-black font-mono">
       {/* Profile Header */}
-      <div className="px-4 sm:px-6 md:px-12 py-8 sm:py-12 md:py-20 border-b-2 border-border bg-card relative overflow-hidden">
-        {/* Background pattern */}
-        <div className="absolute inset-0 opacity-10" style={{
-          backgroundImage: 'linear-gradient(var(--border) 1px, transparent 1px), linear-gradient(90deg, var(--border) 1px, transparent 1px)',
-          backgroundSize: '32px 32px'
+      <div className="px-4 sm:px-6 md:px-12 py-8 sm:py-12 md:py-20 border-b border-white-20 bg-black-1 relative overflow-hidden">
+        {/* Scanline overlay */}
+        <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{
+          backgroundImage: 'repeating-linear-gradient(0deg, rgba(255,255,255,0.1) 0px, rgba(255,255,255,0.1) 1px, transparent 1px, transparent 3px)',
         }} />
 
         <div className="relative z-10 max-w-6xl mx-auto">
+          {/* Terminal prompt */}
+          <div className="text-white-40 text-xs tracking-widest mb-4">$ blacklist --dossier {displayHandle}</div>
+
           {/* Identity Section */}
           <div className="flex flex-col gap-4 sm:gap-6 md:flex-row md:items-center md:justify-between mb-6 sm:mb-8">
             <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-start sm:items-center">
-              {/* Avatar - responsive sizes */}
+              {/* Avatar */}
               <Avatar
                 src={user.avatarUrl?.replace('_normal', '_400x400')}
                 alt={displayName}
                 size="lg"
-                className="border-3 sm:border-4 border-border shrink-0 sm:hidden"
+                className="border border-white-20 shrink-0 sm:hidden"
                 priority
               />
               <Avatar
                 src={user.avatarUrl?.replace('_normal', '_400x400')}
                 alt={displayName}
                 size="xl"
-                className="border-4 border-border shrink-0 hidden sm:block"
+                className="border-2 border-white-20 shrink-0 hidden sm:block"
                 priority
               />
               <div className="min-w-0">
                 {/* Name Row */}
                 <div className="flex items-center gap-2 sm:gap-3 mb-2 flex-wrap">
-                  <h1 className="text-2xl sm:text-3xl md:text-4xl font-black font-display-mock tracking-tight text-dark truncate max-w-[250px] sm:max-w-none">
+                  <h1 className="text-2xl sm:text-3xl md:text-4xl font-mono font-extrabold uppercase tracking-tight text-white truncate max-w-[250px] sm:max-w-none">
                     {displayName}
                   </h1>
                   {user.isKol && <KolBadge size="sm" className="sm:hidden" />}
@@ -132,7 +135,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
                       href={`https://x.com/${user.twitterHandle}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-text-muted hover:text-accent active:text-accent transition-colors p-1 -m-1"
+                      className="text-white-40 hover:text-white active:text-white transition-colors p-1 -m-1"
                       title={`@${user.twitterHandle} on X`}
                     >
                       <svg viewBox="0 0 24 24" className="w-4 h-4 sm:w-5 sm:h-5 fill-current" aria-hidden="true">
@@ -143,16 +146,16 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
                 </div>
 
                 {/* Wallet Row */}
-                <div className="font-mono text-xs sm:text-sm text-text-muted mb-2 sm:mb-3 flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                <div className="font-mono text-xs sm:text-sm text-white-40 mb-2 sm:mb-3 flex items-center gap-1.5 sm:gap-2 flex-wrap">
                   <Wallet size={12} className="sm:w-3.5 sm:h-3.5" />
                   {wallets.length === 0 ? (
                     'No wallet linked'
                   ) : wallets.length === 1 && primaryWallet ? (
-                    <AddressDisplay address={primaryWallet.address} className="text-text-muted hover:text-accent" />
+                    <AddressDisplay address={primaryWallet.address} className="text-white-40 hover:text-white" />
                   ) : primaryWallet ? (
                     <span className="flex items-center gap-1.5 sm:gap-2">
-                      <AddressDisplay address={primaryWallet.address} className="text-text-muted hover:text-accent" />
-                      <span className="text-accent text-[10px] sm:text-xs">+{wallets.length - 1} more</span>
+                      <AddressDisplay address={primaryWallet.address} className="text-white-40 hover:text-white" />
+                      <span className="text-white-60 text-[10px] sm:text-xs">+{wallets.length - 1} more</span>
                     </span>
                   ) : null}
                   {primaryWallet && (
@@ -160,7 +163,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
                       href={`https://pump.fun/profile/${primaryWallet.address}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="px-1.5 sm:px-2 py-0.5 bg-accent hover:bg-accent-dark active:bg-accent-dark text-cream text-[9px] sm:text-[10px] font-bold uppercase transition-colors"
+                      className="px-1.5 sm:px-2 py-0.5 bg-white text-black hover:bg-white-90 active:bg-white-90 text-[9px] sm:text-[10px] font-bold uppercase transition-colors font-mono"
                     >
                       Pump.fun ↗
                     </a>
@@ -176,7 +179,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
                     size="sm"
                   />
                   {stats.migratedTokens > 0 && (
-                    <span className="px-1.5 sm:px-2 py-0.5 bg-accent/20 border border-accent/30 text-[9px] sm:text-[10px] font-bold uppercase text-dark">
+                    <span className="px-1.5 sm:px-2 py-0.5 border border-white-20 text-[9px] sm:text-[10px] font-bold uppercase text-white-60 font-mono">
                       {stats.migratedTokens} Migrations
                     </span>
                   )}
@@ -201,38 +204,27 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
             </div>
           </div>
 
-          {/* Achievement Badges - moved closer */}
-          {tokens.length > 0 && (
-            <div className="mb-6">
-              <BadgeGrid 
-                tokens={tokens.map(t => ({
-                  mint: t.mint,
-                  name: t.name,
-                  symbol: t.symbol,
-                  athMarketCap: t.athMarketCap,
-                  migrated: t.migrated,
-                  score: t.score,
-                }))}
-                title="Achievements"
-                maxDisplay={4}
-              />
-            </div>
-          )}
+          {/* Achievement Badges - Streamed */}
+          <ErrorBoundary>
+            <Suspense fallback={<BadgesSkeleton />}>
+              <BadgesStreaming userId={user.id} wallets={wallets} />
+            </Suspense>
+          </ErrorBoundary>
 
-          {/* Stats Bar - unified horizontal layout */}
-          <div className="bg-surface/50 p-3 sm:p-4 md:p-6 rounded-sm">
+          {/* Stats Bar */}
+          <div className="border border-white-20 bg-black-2 p-3 sm:p-4 md:p-6">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
-              {/* Primary: DevCred Score with emphasis */}
+              {/* Primary: Score */}
               <div className="flex flex-col">
-                <div className="text-[9px] sm:text-[10px] uppercase tracking-widest text-text-muted mb-1 font-bold">DevCred Score</div>
+                <div className="text-[9px] sm:text-[10px] uppercase tracking-widest text-white-40 mb-1 font-bold font-mono">BLACKLIST SCORE</div>
                 <div className="flex items-end gap-1.5 sm:gap-2">
-                  <span className={`text-3xl sm:text-4xl md:text-5xl font-stat ${getDevScoreColor(score.total).textClass}`}>
+                  <span className={`text-3xl sm:text-4xl md:text-5xl font-mono font-extrabold ${getDevScoreColor(score.total).textClass}`}>
                     {score.total}
                   </span>
-                  <span className="text-text-muted/50 text-[10px] sm:text-xs mb-1.5 sm:mb-2">/740</span>
+                  <span className="text-white-20 text-[10px] sm:text-xs mb-1.5 sm:mb-2 font-mono">/740</span>
                 </div>
                 {/* Progress bar */}
-                <div className="mt-1.5 sm:mt-2 h-1 bg-border/30 rounded-full overflow-hidden">
+                <div className="mt-1.5 sm:mt-2 h-1 bg-white-20 overflow-hidden">
                   <div
                     className={`h-full ${getDevScoreColor(score.total).bgClass} transition-all`}
                     style={{ width: `${Math.min(100, (score.total / 740) * 100)}%` }}
@@ -242,22 +234,22 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
 
               {/* Rank */}
               <div className="flex flex-col">
-                <div className="text-[9px] sm:text-[10px] uppercase tracking-widest text-text-muted mb-1 font-bold">Rank</div>
-                <span className="text-2xl sm:text-3xl md:text-4xl font-stat text-dark">
+                <div className="text-[9px] sm:text-[10px] uppercase tracking-widest text-white-40 mb-1 font-bold font-mono">RANK</div>
+                <span className="text-2xl sm:text-3xl md:text-4xl font-mono font-extrabold text-white">
                   {user.rank ? `#${user.rank}` : '-'}
                 </span>
               </div>
 
               {/* Launches */}
               <div className="flex flex-col">
-                <div className="text-[9px] sm:text-[10px] uppercase tracking-widest text-text-muted mb-1 font-bold">Launches</div>
-                <span className="text-2xl sm:text-3xl md:text-4xl font-stat text-dark">{stats.totalTokens}</span>
+                <div className="text-[9px] sm:text-[10px] uppercase tracking-widest text-white-40 mb-1 font-bold font-mono">LAUNCHES</div>
+                <span className="text-2xl sm:text-3xl md:text-4xl font-mono font-extrabold text-white">{stats.totalTokens}</span>
               </div>
 
-              {/* Tier */}
+              {/* Classification */}
               <div className="flex flex-col">
-                <div className="text-[9px] sm:text-[10px] uppercase tracking-widest text-text-muted mb-1 font-bold">Reputation</div>
-                <span className="text-lg sm:text-xl md:text-2xl font-bold uppercase tracking-wide text-dark truncate">{score.tierName}</span>
+                <div className="text-[9px] sm:text-[10px] uppercase tracking-widest text-white-40 mb-1 font-bold font-mono">CLASSIFICATION</div>
+                <span className="text-lg sm:text-xl md:text-2xl font-bold uppercase tracking-wide text-white truncate font-mono">{score.tierName}</span>
               </div>
             </div>
           </div>
@@ -286,39 +278,17 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
           </div>
         </ErrorBoundary>
 
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 sm:gap-4 mb-6 sm:mb-8 border-b-2 border-dark/20 pb-3 sm:pb-4">
-          <h2 className="text-2xl sm:text-3xl md:text-4xl font-black font-display-mock text-dark">Token History</h2>
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 sm:gap-4 mb-6 sm:mb-8 border-b border-white-20 pb-3 sm:pb-4">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-mono font-extrabold uppercase text-white">Token History</h2>
           <ErrorBoundary>
             <ProfileActions profileUserId={user.id} hasWallets={wallets.length > 0} />
           </ErrorBoundary>
         </div>
 
+        {/* Token List - Streamed */}
         <ErrorBoundary>
-          <Suspense fallback={
-            <div className="grid gap-4 sm:gap-6">
-              {[...Array(3)].map((_, i) => (
-                <div key={i} className="border-2 border-dark/20 bg-card p-4 sm:p-6 h-32 sm:h-48 animate-pulse rounded-sm" />
-              ))}
-            </div>
-          }>
-            <div className="grid gap-4 sm:gap-6">
-              {tokens.map((token) => (
-                <TokenCard key={token.mint} token={token} />
-              ))}
-
-              {tokens.length === 0 && (
-                <div className="border-2 border-dashed border-dark/30 bg-card p-6 sm:p-10 md:p-16 text-center">
-                  <div className="w-12 h-12 sm:w-16 sm:h-16 bg-accent/10 border-2 border-dashed border-accent/30 mx-auto mb-4 sm:mb-6 flex items-center justify-center">
-                    <Wallet size={24} className="text-accent/50 sm:w-7 sm:h-7" />
-                  </div>
-                  <h3 className="text-lg sm:text-xl md:text-2xl font-black font-display-mock mb-2 sm:mb-3 text-dark">No Token Launches Yet</h3>
-                  <p className="text-sm sm:text-base text-dark/60 mb-4 sm:mb-6 max-w-md mx-auto">
-                    Connect a wallet to scan your token launch history and build your reputation.
-                  </p>
-                  <ConnectWalletButton profileUserId={user.id} />
-                </div>
-              )}
-            </div>
+          <Suspense fallback={<TokenListSkeleton />}>
+            <TokenListStreaming userId={user.id} wallets={wallets} />
           </Suspense>
         </ErrorBoundary>
       </div>

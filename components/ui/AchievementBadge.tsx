@@ -8,21 +8,9 @@ import {
 } from 'lucide-react';
 import { Badge, TIER_STYLES, formatBadgeValue } from '@/lib/badges';
 
-// Icon map for dynamic rendering
 const ICON_MAP: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
-  Coins,
-  TrendingUp,
-  Rocket,
-  Flame,
-  Gem,
-  Crown,
-  Plane,
-  Award,
-  Users,
-  Trophy,
-  Zap,
-  Diamond,
-  Layers,
+  Coins, TrendingUp, Rocket, Flame, Gem, Crown,
+  Plane, Award, Users, Trophy, Zap, Diamond, Layers,
 };
 
 interface AchievementBadgeProps {
@@ -33,24 +21,9 @@ interface AchievementBadgeProps {
 }
 
 const sizeClasses = {
-  sm: {
-    container: 'w-9 h-9',
-    icon: 14,
-    text: 'text-[7px]',
-    padding: 'p-1',
-  },
-  md: {
-    container: 'w-12 h-12',
-    icon: 18,
-    text: 'text-[9px]',
-    padding: 'p-1.5',
-  },
-  lg: {
-    container: 'w-16 h-16',
-    icon: 24,
-    text: 'text-[11px]',
-    padding: 'p-2',
-  },
+  sm: { container: 'w-9 h-9', icon: 14, text: 'text-[7px]', padding: 'p-1' },
+  md: { container: 'w-12 h-12', icon: 18, text: 'text-[9px]', padding: 'p-1.5' },
+  lg: { container: 'w-16 h-16', icon: 24, text: 'text-[11px]', padding: 'p-2' },
 };
 
 export function AchievementBadge({
@@ -69,7 +42,6 @@ export function AchievementBadge({
 
   const handleMouseEnter = useCallback(() => {
     if (!showTooltip) return;
-
     if (badgeRef.current) {
       const rect = badgeRef.current.getBoundingClientRect();
       setTooltipPosition(rect.top > 200 ? 'top' : 'bottom');
@@ -78,9 +50,7 @@ export function AchievementBadge({
   }, [showTooltip]);
 
   const handleMouseLeave = useCallback(() => {
-    if (showTooltip) {
-      setIsTooltipVisible(false);
-    }
+    if (showTooltip) setIsTooltipVisible(false);
   }, [showTooltip]);
 
   const handleInteraction = () => {
@@ -114,17 +84,17 @@ export function AchievementBadge({
           active:scale-95
           cursor-pointer
           group
+          font-mono
         `}
-        style={{ clipPath: 'polygon(8% 0, 92% 0, 100% 8%, 100% 92%, 92% 100%, 8% 100%, 0 92%, 0 8%)' }}
         aria-label={badge.label}
-        title={badge.label}
+        title={`[${tierStyle.classifiedLabel}] ${badge.label}`}
       >
         <IconComponent
           size={sizeClass.icon}
-          className={`${tierStyle.textColor} drop-shadow-sm group-hover:scale-110 transition-transform`}
+          className={`${tierStyle.textColor} group-hover:scale-110 transition-transform`}
         />
         {size !== 'sm' && formattedValue && (
-          <span className={`${sizeClass.text} ${tierStyle.textColor} font-bold leading-none tracking-tight`}>
+          <span className={`${sizeClass.text} ${tierStyle.textColor} font-bold leading-none tracking-wider font-mono`}>
             {formattedValue}
           </span>
         )}
@@ -137,8 +107,7 @@ export function AchievementBadge({
             absolute z-50 w-52
             ${tooltipPosition === 'top' ? 'bottom-full mb-2' : 'top-full mt-2'}
             left-1/2 -translate-x-1/2
-            bg-card border-2 border-border
-            shadow-[4px_4px_0px_0px_var(--border)]
+            bg-black-2 border border-white-20
             p-3
             animate-in fade-in-0 zoom-in-95 duration-150
           `}
@@ -147,7 +116,7 @@ export function AchievementBadge({
           <div
             className={`
               absolute left-1/2 -translate-x-1/2 w-2.5 h-2.5
-              bg-card border-border rotate-45
+              bg-black-2 border-white-20 rotate-45
               ${tooltipPosition === 'top' ? '-bottom-1.5 border-r border-b' : '-top-1.5 border-l border-t'}
             `}
           />
@@ -155,45 +124,41 @@ export function AchievementBadge({
           <div className="relative">
             {/* Badge header */}
             <div className="flex items-center gap-2 mb-2">
-              <div
-                className={`w-7 h-7 flex items-center justify-center ${tierStyle.bg} border ${tierStyle.border}`}
-                style={{ clipPath: 'polygon(15% 0, 85% 0, 100% 15%, 100% 85%, 85% 100%, 15% 100%, 0 85%, 0 15%)' }}
-              >
+              <div className={`w-7 h-7 flex items-center justify-center ${tierStyle.bg} border ${tierStyle.border}`}>
                 <IconComponent size={14} className={tierStyle.textColor} />
               </div>
               <div>
-                <div className="font-bold text-dark text-sm leading-tight">{badge.label}</div>
-                <div className={`text-[10px] font-mono uppercase tracking-wider ${tierStyle.labelColor}`}>
-                  {badge.tier}
+                <div className="font-mono font-bold text-white text-xs leading-tight">{badge.label}</div>
+                <div className={`text-[10px] font-mono uppercase tracking-widest ${tierStyle.labelColor}`}>
+                  [{tierStyle.classifiedLabel}]
                 </div>
               </div>
             </div>
 
-            {/* Description */}
-            <p className="text-text-muted text-xs leading-relaxed mb-2">{badge.description}</p>
+            <p className="text-white-60 text-xs font-mono leading-relaxed mb-2">{badge.description}</p>
 
             {/* Token info */}
             {badge.tokenName && (
-              <div className="bg-surface border border-border p-2">
+              <div className="bg-black-1 border border-white-20 p-2">
                 <div className="flex items-center justify-between gap-2">
                   <div className="min-w-0">
-                    <div className="font-bold text-dark text-sm truncate">{badge.tokenName}</div>
-                    <div className="text-text-muted text-xs font-mono">${badge.tokenSymbol}</div>
+                    <div className="font-mono font-bold text-white text-xs truncate">{badge.tokenName}</div>
+                    <div className="text-white-40 text-[10px] font-mono">${badge.tokenSymbol}</div>
                   </div>
                   {badge.tokenMint && (
                     <Link
                       href={`/token/${badge.tokenMint}`}
-                      className="text-accent hover:text-accent-light text-xs font-bold uppercase shrink-0"
+                      className="text-white-60 hover:text-white text-[10px] font-mono font-bold uppercase shrink-0"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      View →
+                      VIEW →
                     </Link>
                   )}
                 </div>
                 {formattedValue && (
-                  <div className="mt-2 pt-2 border-t border-border flex items-center justify-between">
-                    <span className="text-text-muted text-xs">Achieved</span>
-                    <span className={`font-stat text-sm ${tierStyle.valueColor}`}>{formattedValue}</span>
+                  <div className="mt-2 pt-2 border-t border-white-20 flex items-center justify-between">
+                    <span className="text-white-40 text-[10px] font-mono">ACHIEVED</span>
+                    <span className={`font-mono font-bold text-xs ${tierStyle.valueColor}`}>{formattedValue}</span>
                   </div>
                 )}
               </div>

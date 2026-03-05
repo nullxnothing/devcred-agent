@@ -1,5 +1,5 @@
 /**
- * NextAuth.js configuration for DevCred
+ * NextAuth.js configuration for Blacklist
  * Twitter OAuth for developer authentication
  * Supports linking Twitter to existing wallet-based accounts
  */
@@ -10,9 +10,15 @@ import { cookies } from 'next/headers';
 import { jwtVerify, JWTPayload } from 'jose';
 import { getUserByTwitterId, getUserById, createUser, updateUser } from './db';
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || process.env.NEXTAUTH_SECRET || 'fallback-secret'
-);
+function getJwtSecret(): Uint8Array {
+  const secret = process.env.JWT_SECRET || process.env.NEXTAUTH_SECRET;
+  if (!secret) {
+    throw new Error('FATAL: JWT_SECRET or NEXTAUTH_SECRET must be set in environment variables');
+  }
+  return new TextEncoder().encode(secret);
+}
+
+const JWT_SECRET = getJwtSecret();
 
 interface WalletSession extends JWTPayload {
   userId: string;
@@ -59,14 +65,14 @@ export const authOptions: NextAuthOptions = {
         const twitterHandle = twitterProfile?.data?.username || twitterProfile?.username || '';
         const avatarUrl = user.image?.replace('_normal', '_400x400') || null;
 
-        console.log('[DevCred Auth] Twitter handle:', twitterHandle);
+        console.log('[Blacklist Auth] Twitter handle:', twitterHandle);
 
         // Check if user is already logged in via wallet (linking flow)
         const walletSession = await getWalletSession();
 
         if (walletSession?.userId) {
           // LINKING FLOW: User is logged in with wallet, link Twitter to their account
-          console.log('[DevCred Auth] Linking Twitter to wallet user:', walletSession.userId);
+          console.log('[Blacklist Auth] Linking Twitter to wallet user:', walletSession.userId);
 
           const existingWalletUser = await getUserById(walletSession.userId);
 
@@ -75,7 +81,7 @@ export const authOptions: NextAuthOptions = {
             const existingTwitterUser = await getUserByTwitterId(account.providerAccountId);
 
             if (existingTwitterUser && existingTwitterUser.id !== existingWalletUser.id) {
-              console.log('[DevCred Auth] Twitter already linked to different account');
+              console.log('[Blacklist Auth] Twitter already linked to different account');
               // Return error URL
               return `/profile/${existingWalletUser.primary_wallet}?twitter_error=${encodeURIComponent('This X account is already linked to another profile')}`;
             }
@@ -88,7 +94,7 @@ export const authOptions: NextAuthOptions = {
               avatar_url: avatarUrl,
             });
 
-            console.log('[DevCred Auth] Twitter linked successfully');
+            console.log('[Blacklist Auth] Twitter linked successfully');
             return true;
           }
         }

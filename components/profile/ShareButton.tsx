@@ -35,7 +35,7 @@ export function ShareButton({
   const rankText = rank ? ` | Rank #${rank}` : '';
   const launchText = tokenCount ? ` | ${tokenCount} launches` : '';
   const migratedText = migratedCount ? ` (${migratedCount} migrated)` : '';
-  const shareText = `My DevKarma Score: ${score} (${tierName})${rankText}${launchText}${migratedText}\n\nCheck your developer reputation on @devkarma_io`;
+  const shareText = `My Blacklist Score: ${score} (${tierName})${rankText}${launchText}${migratedText}\n\nCheck your developer reputation on @blacklist`;
 
   const handleCopyLink = async () => {
     try {
@@ -58,7 +58,7 @@ export function ShareButton({
     if (navigator.share) {
       try {
         await navigator.share({
-          title: `DevKarma Profile - ${handle}`,
+          title: `Blacklist Profile - ${handle}`,
           text: shareText,
           url: profileUrl,
         });
@@ -72,7 +72,7 @@ export function ShareButton({
   return (
     <div className="relative">
       <Button
-        variant="accent"
+        variant="primary"
         className="flex-1 md:flex-none"
         onClick={() => setShowMenu(!showMenu)}
       >
@@ -88,18 +88,18 @@ export function ShareButton({
           />
 
           {/* Dropdown Menu */}
-          <div className="absolute right-0 mt-2 w-56 bg-card border-2 border-border shadow-[4px_4px_0px_0px_var(--border)] z-50">
+          <div className="absolute right-0 mt-2 w-56 bg-black-2 border-2 border-white-20 z-50">
             <div className="p-2">
               <button
                 onClick={handleCopyLink}
-                className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-accent/10 transition-colors text-dark"
+                className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-white/10 transition-colors text-white"
               >
                 {copied ? (
                   <Check size={18} className="text-success" />
                 ) : (
-                  <Copy size={18} className="text-dark" />
+                  <Copy size={18} className="text-white" />
                 )}
-                <span className="font-semibold text-sm text-dark">
+                <span className="font-semibold text-sm text-white">
                   {copied ? 'Copied!' : 'Copy Link'}
                 </span>
               </button>
@@ -107,10 +107,10 @@ export function ShareButton({
               {typeof navigator !== 'undefined' && typeof navigator.share === 'function' && (
                 <button
                   onClick={handleNativeShare}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-accent/10 transition-colors text-dark"
+                  className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-white/10 transition-colors text-white"
                 >
-                  <Share2 size={18} className="text-dark" />
-                  <span className="font-semibold text-sm text-dark">More Options...</span>
+                  <Share2 size={18} className="text-white" />
+                  <span className="font-semibold text-sm text-white">More Options...</span>
                 </button>
               )}
             </div>

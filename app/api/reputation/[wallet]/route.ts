@@ -10,7 +10,6 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserByAnyWallet, getTokensForUserWallets, getWalletsByUserId } from '@/lib/db';
-import { scanWalletQuick } from '@/lib/wallet-scan';
 import { isValidSolanaAddress } from '@/lib/validation/solana';
 
 interface ReputationResponse {
@@ -73,8 +72,8 @@ export async function GET(
       const response: ReputationResponse = {
         wallet,
         score: user.total_score,
-        tier: user.tier || 'unverified',
-        tierName: getTierName(user.tier || 'unverified'),
+        tier: user.tier || 'ghost',
+        tierName: getTierName(user.tier || 'ghost'),
         tokenCount,
         rugCount,
         migrationCount,
@@ -97,22 +96,25 @@ export async function GET(
       });
     }
 
-    // No cached data, perform fresh scan
-    const result = await scanWalletQuick(wallet);
-
+    // No cached data — return empty score instead of triggering expensive fresh scan
+    // Fresh scans should only happen via authenticated profile views
     const response: ReputationResponse = {
       wallet,
-      score: result.totalScore,
-      tier: result.tier,
-      tierName: result.tierName,
-      tokenCount: result.breakdown.tokenCount,
-      rugCount: result.breakdown.rugCount,
-      migrationCount: result.breakdown.migrationCount,
-      lastScanned: new Date().toISOString(),
+      score: 0,
+      tier: 'ghost',
+      tierName: 'GHOST',
+      tokenCount: 0,
+      rugCount: 0,
+      migrationCount: 0,
+      lastScanned: null,
       source: 'fresh',
     };
 
-    return NextResponse.json(response);
+    return NextResponse.json(response, {
+      headers: {
+        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120',
+      },
+    });
   } catch (error) {
     console.error('Reputation API error:', error);
     return NextResponse.json(
@@ -124,14 +126,14 @@ export async function GET(
 
 function getTierName(tier: string): string {
   const names: Record<string, string> = {
-    legend: 'Legend',
-    elite: 'Elite',
-    rising_star: 'Rising Star',
-    proven: 'Proven',
-    builder: 'Builder',
-    verified: 'Verified',
-    penalized: 'Penalized',
-    unverified: 'Unverified',
+    sovereign: 'SOVEREIGN',
+    cleared: 'CLEARED',
+    operative: 'OPERATIVE',
+    vetted: 'VETTED',
+    tracked: 'TRACKED',
+    filed: 'FILED',
+    flagged: 'FLAGGED',
+    ghost: 'GHOST',
   };
-  return names[tier] || 'Unknown';
+  return names[tier] || 'GHOST';
 }

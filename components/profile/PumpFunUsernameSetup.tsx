@@ -59,10 +59,10 @@ export function PumpFunUsernameSetup({ onComplete, onSkip }: PumpFunUsernameSetu
   }
 
   return (
-    <div className="p-4 border-2 border-dark/10 bg-card/50">
+    <div className="p-4 border-2 border-white/10 bg-black-2/50">
       <div className="mb-3">
-        <h3 className="font-bold text-sm text-dark mb-1">Link Pump.fun Username (Optional)</h3>
-        <p className="text-xs text-dark/60">
+        <h3 className="font-bold text-sm text-white mb-1">Link Pump.fun Username (Optional)</h3>
+        <p className="text-xs text-white-60">
           If you have a username on pump.fun, enter it here to link your profiles.
         </p>
       </div>
@@ -74,7 +74,7 @@ export function PumpFunUsernameSetup({ onComplete, onSkip }: PumpFunUsernameSetu
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             placeholder="Your pump.fun username"
-            className="w-full h-10 px-3 border-2 border-dark/30 bg-card text-sm font-medium focus:border-accent focus:outline-none"
+            className="w-full h-10 px-3 border-2 border-white/20 bg-black-2 text-sm font-medium text-white focus:border-white focus:outline-none"
             disabled={status === 'saving'}
             maxLength={50}
           />
@@ -90,7 +90,7 @@ export function PumpFunUsernameSetup({ onComplete, onSkip }: PumpFunUsernameSetu
           <button
             type="submit"
             disabled={status === 'saving' || !username.trim()}
-            className="flex-1 h-10 bg-accent text-cream font-bold uppercase tracking-tight text-xs hover:bg-accent/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="flex-1 h-10 bg-white text-black font-bold uppercase tracking-tight text-xs hover:bg-white/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {status === 'saving' ? (
               <>
@@ -105,7 +105,7 @@ export function PumpFunUsernameSetup({ onComplete, onSkip }: PumpFunUsernameSetu
           <button
             type="button"
             onClick={handleSkip}
-            className="h-10 px-4 border-2 border-dark/20 bg-card text-dark font-bold uppercase tracking-tight text-xs hover:bg-dark/5 transition-colors"
+            className="h-10 px-4 border-2 border-white/20 bg-black-2 text-white font-bold uppercase tracking-tight text-xs hover:bg-white/10 transition-colors"
           >
             Skip
           </button>

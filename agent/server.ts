@@ -1,5 +1,5 @@
 /**
- * HTTP Server for DevCred Agent
+ * HTTP Server for Blacklist Agent
  * Serves the reputation API alongside the WebSocket monitor
  * Supports multi-wallet identity linking
  */
@@ -47,9 +47,11 @@ setInterval(() => {
 const ALLOWED_ORIGINS = [
   'https://devkarma.fun',
   'https://www.devkarma.fun',
+  'https://blacklist.fun',
+  'https://www.blacklist.fun',
   'https://axiom.trade',
   'https://www.axiom.trade',
-  'chrome-extension://', // Chrome extensions
+  'chrome-extension://',
 ];
 
 function isValidSolanaAddress(address: string): boolean {
@@ -58,16 +60,16 @@ function isValidSolanaAddress(address: string): boolean {
 
 function getTierName(tier: string): string {
   const names: Record<string, string> = {
-    legend: 'Legend',
-    elite: 'Elite',
-    rising_star: 'Rising Star',
-    proven: 'Proven',
-    builder: 'Builder',
-    verified: 'Verified',
-    penalized: 'Penalized',
-    unverified: 'Unverified',
+    sovereign: 'SOVEREIGN',
+    cleared: 'CLEARED',
+    operative: 'OPERATIVE',
+    vetted: 'VETTED',
+    tracked: 'TRACKED',
+    filed: 'FILED',
+    flagged: 'FLAGGED',
+    ghost: 'GHOST',
   };
-  return names[tier] || 'Unknown';
+  return names[tier] || 'GHOST';
 }
 
 // Handle scraped data update from extension
@@ -169,8 +171,8 @@ async function handleReputation(wallet: string): Promise<object> {
     return {
       wallet,
       score: user.total_score,
-      tier: user.tier || 'unverified',
-      tierName: getTierName(user.tier || 'unverified'),
+      tier: user.tier || 'ghost',
+      tierName: getTierName(user.tier || 'ghost'),
       tokenCount,
       rugCount,
       migrationCount,
@@ -249,7 +251,7 @@ export function startServer() {
       res.end(JSON.stringify({
         status: 'ok',
         timestamp: new Date().toISOString(),
-        service: 'devcred-agent',
+        service: 'blacklist-agent',
       }));
       return;
     }
@@ -312,7 +314,7 @@ export function startServer() {
     if (path === '/') {
       res.writeHead(200, headers);
       res.end(JSON.stringify({
-        service: 'DevCred Agent',
+        service: 'Blacklist Agent',
         version: '1.0.0',
         endpoints: [
           'GET /api/health',
