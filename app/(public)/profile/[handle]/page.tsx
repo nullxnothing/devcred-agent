@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
 import { Suspense } from 'react';
 import { Wallet } from 'lucide-react';
-import { getProfileHeader, getProfileData } from '@/lib/data-fetching';
+import { getProfileHeader } from '@/lib/data-fetching';
 import { Avatar } from '@/components/ui/Avatar';
 import { ProfileActions, ShareButton, TokenListStreaming, TokenListSkeleton, BadgesStreaming, BadgesSkeleton } from '@/components/profile';
 import { WalletList } from '@/components/wallet';
@@ -13,6 +13,10 @@ import { TwitterLink } from '@/components/profile';
 import { getDevScoreColor } from '@/lib/score-colors';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 
+// Force dynamic rendering - profiles are user-generated and database-dependent
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 interface ProfilePageProps {
   params: Promise<{ handle: string }>;
 }
@@ -20,7 +24,7 @@ interface ProfilePageProps {
 export async function generateMetadata({ params }: ProfilePageProps): Promise<Metadata> {
   const { handle } = await params;
   const decodedHandle = decodeURIComponent(handle);
-  const profile = await getProfileData(decodedHandle);
+  const profile = await getProfileHeader(decodedHandle);
 
   if (!profile) {
     return {
