@@ -6,3 +6,4 @@ export { BadgeGrid, BadgeRow } from './BadgeGrid';
 export { TwitterLink } from './TwitterLink';
 export { TokenListStreaming, TokenListSkeleton } from './TokenListStreaming';
 export { BadgesStreaming, BadgesSkeleton } from './BadgesStreaming';
+export { AutoScanTrigger } from './AutoScanTrigger';
