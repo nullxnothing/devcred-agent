@@ -70,6 +70,14 @@ export const TIER_THRESHOLDS = {
 
 export type DevTier = 'sovereign' | 'cleared' | 'operative' | 'vetted' | 'tracked' | 'filed' | 'flagged' | 'ghost';
 
+const VALID_DEV_TIERS = new Set<DevTier>([
+  'sovereign', 'cleared', 'operative', 'vetted', 'tracked', 'filed', 'flagged', 'ghost',
+]);
+
+export function isDevTier(value: unknown): value is DevTier {
+  return typeof value === 'string' && VALID_DEV_TIERS.has(value as DevTier);
+}
+
 export interface TokenScoreBreakdown {
   migration: number;      // 0-30
   traction: number;       // 0-25 (was athMarketCap)
@@ -539,7 +547,9 @@ export function getTierInfo(tier: DevTier): {
     },
   };
 
-  return tierInfo[tier];
+  // Defensive: legacy DB rows can hold tier values no longer in the enum
+  // (e.g. 'verified', 'unverified'). Fall back to 'ghost' rather than throwing.
+  return tierInfo[tier] ?? tierInfo.ghost;
 }
 
 /**

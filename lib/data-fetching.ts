@@ -1,5 +1,5 @@
 import { getLeaderboard as dbGetLeaderboard, getUserByTwitterHandle, getUserByAnyWallet, getOrCreateSystemUser, getWalletsByUserId, getTokensForUserWallets, updateUser, addScoreHistory, recordProfileView, upsertToken, updateUserRank, getKolByUserId, getKolStatusForUsers, getKolsWithUsers } from './db';
-import { getTierInfo, DevTier, calculateDevScore, calculateTokenScoresBatch, TokenScoreInput, determineTier } from './scoring';
+import { getTierInfo, DevTier, calculateDevScore, calculateTokenScoresBatch, TokenScoreInput, determineTier, isDevTier } from './scoring';
 import { getMultipleTokensMarketData } from './dexscreener';
 import { detectRugPattern, getMigratedTokensFromSwapHistory, batchGetHolderCountsQuick } from './helius';
 import { getCachedHolderCount, setCachedHolderCount, invalidateWalletCache as invalidateDbWalletCache } from './cache';
@@ -326,7 +326,7 @@ export async function getProfileData(handle: string, viewerIp?: string, forceRef
 
     if (hasRecentScrape && user.total_score > 0 && !forceRefresh) {
       // Use cached Axiom score - skip recalculation
-      const cachedTier = (user.tier as DevTier) || 'ghost';
+      const cachedTier: DevTier = isDevTier(user.tier) ? user.tier : 'ghost';
       const tierInfo = getTierInfo(cachedTier);
       const kol = await getKolByUserId(user.id);
 
@@ -566,7 +566,7 @@ export async function getProfileHeader(handle: string): Promise<ProfileHeaderDat
       getTokensForUserWallets(user.id),
     ]);
 
-    const tier = (user.tier as DevTier) || determineTier({
+    const tier: DevTier = isDevTier(user.tier) ? user.tier : determineTier({
       score: user.total_score,
       migrationCount: user.migration_count || 0,
       tokenCount: user.token_count || 0,
@@ -726,7 +726,7 @@ export async function getKolLeaderboardData(limit: number = 50): Promise<KolLead
   return kols.map((kol) => {
     let tier: DevTier = 'ghost';
     if (kol.user_total_score !== undefined && kol.user_total_score !== null) {
-      tier = (kol.user_tier as DevTier) || determineTier({
+      tier = isDevTier(kol.user_tier) ? kol.user_tier : determineTier({
         score: Number(kol.user_total_score),
         migrationCount: 0,
         tokenCount: 0,
