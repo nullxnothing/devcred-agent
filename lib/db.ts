@@ -12,25 +12,14 @@ const poolMax = Number.isFinite(parsedPoolMax) && parsedPoolMax > 0
   ? parsedPoolMax
   : DEFAULT_POOL_MAX;
 
-function normalizeDatabaseUrl(databaseUrl: string | undefined): {
-  connectionString: string | undefined;
-  hasSslMode: boolean;
-} {
-  if (!databaseUrl) {
-    return { connectionString: databaseUrl, hasSslMode: false };
-  }
-
+function stripSslMode(databaseUrl: string | undefined): string | undefined {
+  if (!databaseUrl) return databaseUrl;
   try {
     const url = new URL(databaseUrl);
-    if (url.searchParams.get('sslmode') === 'require') {
-      url.searchParams.set('sslmode', 'verify-full');
-    }
-    return {
-      connectionString: url.toString(),
-      hasSslMode: url.searchParams.has('sslmode'),
-    };
+    url.searchParams.delete('sslmode');
+    return url.toString();
   } catch {
-    return { connectionString: databaseUrl, hasSslMode: false };
+    return databaseUrl;
   }
 }
 
@@ -39,11 +28,15 @@ function createPool(): Pool {
     console.warn('DATABASE_URL is not set; database requests will fail.');
   }
 
-  const { connectionString, hasSslMode } = normalizeDatabaseUrl(process.env.DATABASE_URL);
+  // Railway PostgreSQL uses an internal CA that Node's default trust store
+  // does not recognize. We strip any sslmode hint from the URL so the explicit
+  // ssl option below wins, and use rejectUnauthorized: false in production.
+  const connectionString = stripSslMode(process.env.DATABASE_URL);
+  const isProduction = process.env.NODE_ENV === 'production' || !!process.env.VERCEL;
 
   return new Pool({
     connectionString,
-    ssl: hasSslMode ? undefined : process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+    ssl: isProduction ? { rejectUnauthorized: false } : false,
     max: poolMax,
     idleTimeoutMillis: 10000,
     connectionTimeoutMillis: 10000,

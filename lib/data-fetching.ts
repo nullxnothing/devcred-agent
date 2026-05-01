@@ -609,8 +609,11 @@ export async function getProfileHeader(handle: string): Promise<ProfileHeaderDat
       },
     };
   } catch (error) {
+    // Re-throw so the page can distinguish "not found" (null) from infra failure.
+    // The page's outer try/catch will log and render notFound() either way, but
+    // logs preserve the real cause (e.g. DB connection / SSL errors).
     console.error('Error fetching profile header:', error);
-    return null;
+    throw error;
   }
 }
 
