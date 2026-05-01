@@ -41,7 +41,11 @@ export async function POST(request: NextRequest) {
       scanResult.tokens.map(async (tokenData) => {
         const migrationInfo = migratedTokens.get(tokenData.mintAddress);
 
-        let rugDetection = { isRug: false, severity: null, sellPercent: 0 };
+        let rugDetection: { isRug: boolean; severity: 'soft' | 'hard' | null; sellPercent: number } = { 
+          isRug: false, 
+          severity: null, 
+          sellPercent: 0 
+        };
         try {
           rugDetection = await detectRugPattern(
             walletAddress,
