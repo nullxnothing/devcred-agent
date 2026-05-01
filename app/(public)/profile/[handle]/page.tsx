@@ -16,6 +16,7 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 // Force dynamic rendering - profiles are user-generated and database-dependent
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
+export const maxDuration = 30; // Increase timeout for wallet scanning
 
 interface ProfilePageProps {
   params: Promise<{ handle: string }>;
@@ -82,18 +83,19 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
   const { handle } = await params;
   const decodedHandle = decodeURIComponent(handle);
 
-  // Fast header data with cached score
-  const header = await getProfileHeader(decodedHandle);
+  try {
+    // Fast header data with cached score
+    const header = await getProfileHeader(decodedHandle);
 
-  if (!header) {
-    notFound();
-  }
+    if (!header) {
+      notFound();
+    }
 
-  const { user, score, wallets, stats } = header;
-  const primaryWallet = wallets.find((w) => w.isPrimary) || wallets[0];
+    const { user, score, wallets, stats } = header;
+    const primaryWallet = wallets.find((w) => w.isPrimary) || wallets[0];
 
-  const displayName = user.twitterName || (primaryWallet?.address ? `Dev ${primaryWallet.address.slice(0, 4)}...${primaryWallet.address.slice(-4)}` : 'Unknown Subject');
-  const displayHandle = user.twitterHandle || (primaryWallet?.address ? primaryWallet.address.slice(0, 12) : 'unknown');
+    const displayName = user.twitterName || (primaryWallet?.address ? `Dev ${primaryWallet.address.slice(0, 4)}...${primaryWallet.address.slice(-4)}` : 'Unknown Subject');
+    const displayHandle = user.twitterHandle || (primaryWallet?.address ? primaryWallet.address.slice(0, 12) : 'unknown');
 
   return (
     <div className="min-h-screen bg-black font-mono">
@@ -298,4 +300,8 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
       </div>
     </div>
   );
+  } catch (error) {
+    console.error('[ProfilePage] Error loading profile:', error);
+    notFound();
+  }
 }
