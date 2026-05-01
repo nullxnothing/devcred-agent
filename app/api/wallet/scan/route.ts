@@ -91,6 +91,6 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('[wallet-scan] Error:', error);
-    return apiError('Scan failed', error);
+    return apiError(error);
   }
 }
