@@ -9,7 +9,8 @@ interface TokenListStreamingProps {
 }
 
 export async function TokenListStreaming({ userId, wallets }: TokenListStreamingProps) {
-  const { tokens } = await getProfileTokens(userId, wallets);
+  // Disable auto-scan to prevent timeout on first visit - user must manually trigger scan
+  const { tokens } = await getProfileTokens(userId, wallets, { scanIfEmpty: false });
 
   if (tokens.length === 0) {
     return (
