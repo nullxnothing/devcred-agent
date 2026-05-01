@@ -10,7 +10,7 @@ const jetbrains = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "BLACKLIST — We see everything.",
+  title: "Blacklist",
   description: "Developer threat assessment for Solana token creators. On-chain surveillance scoring. We see everything.",
   icons: {
     icon: [

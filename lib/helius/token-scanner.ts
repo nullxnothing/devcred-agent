@@ -200,7 +200,10 @@ export async function verifyTokenCreator(
   }
 }
 
-export async function getTokensCreatedByWalletViaFeePayer(walletAddress: string): Promise<TokenCreated[]> {
+export async function getTokensCreatedByWalletViaFeePayer(
+  walletAddress: string,
+  options: { maxPages?: number } = {}
+): Promise<TokenCreated[]> {
   const seenMints = new Set<string>();
   const mintInfos: Array<{
     mint: string;
@@ -211,7 +214,7 @@ export async function getTokensCreatedByWalletViaFeePayer(walletAddress: string)
   try {
     let before: string | undefined;
     let hasMore = true;
-    const MAX_PAGES = 100; // Scan up to 10,000 transactions to catch all token creations
+    const MAX_PAGES = Math.max(1, Math.min(options.maxPages ?? 10, 100));
     let page = 0;
 
     while (hasMore && page < MAX_PAGES) {
@@ -293,4 +296,3 @@ export async function getTokensCreatedByWalletViaFeePayer(walletAddress: string)
 
   return tokens;
 }
-

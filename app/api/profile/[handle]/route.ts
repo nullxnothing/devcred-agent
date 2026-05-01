@@ -11,7 +11,7 @@ import {
   updateUserRank
 } from '@/lib/db';
 import { calculateDevScore, getTierInfo } from '@/lib/scoring';
-import { scanWalletQuick, MAX_AUTO_SCAN_TOKENS } from '@/lib/wallet-scan';
+import { scanWalletQuick, PROFILE_AUTO_SCAN_MAX_TOKENS } from '@/lib/wallet-scan';
 import { PublicKey } from '@solana/web3.js';
 import { apiOk, apiNotFound, apiError, withCache } from '@/lib/api-response';
 
@@ -37,12 +37,8 @@ export async function GET(
       }
 
       if (isValidAddress) {
-        // Look up existing user only — don't auto-create from unauthenticated requests
-        const { getUserByAnyWallet } = await import('@/lib/db');
-        user = await getUserByAnyWallet(cleanHandle);
-        if (!user) {
-          return apiNotFound('User', cleanHandle);
-        }
+        // Create system user for new wallets to enable on-the-fly scanning
+        user = await getOrCreateSystemUser(cleanHandle);
       }
     }
 
@@ -168,7 +164,7 @@ export async function GET(
           avgTokenScore: devScore.breakdown.averageTokenScore,
           totalTokensFound: totalTokensFound || tokens.length,
           tokensLimited,
-          maxAutoScanTokens: MAX_AUTO_SCAN_TOKENS,
+          maxAutoScanTokens: PROFILE_AUTO_SCAN_MAX_TOKENS,
         },
       }),
       60,

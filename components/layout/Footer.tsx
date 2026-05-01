@@ -19,19 +19,18 @@ export const Footer: React.FC = () => {
               <p className="text-xs font-mono text-white-40 max-w-sm leading-relaxed mb-3">
                 We see everything. Developer threat assessment for Solana token creators.
               </p>
-              <div className="flex gap-3">
-                <a
-                  href="https://x.com/Blacklistsolana"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-9 h-9 sm:w-10 sm:h-10 bg-white text-black flex items-center justify-center hover:bg-white-90 transition-colors"
-                  title="Follow on X"
-                >
-                  <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current">
-                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-                  </svg>
-                </a>
-              </div>
+              <a
+                href="https://x.com/Blacklistfun"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 text-xs font-mono text-white-60 hover:text-white transition-colors group"
+                title="Follow @Blacklistfun on X"
+              >
+                <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current" aria-hidden="true">
+                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                </svg>
+                <span className="group-hover:underline">@Blacklistfun</span>
+              </a>
             </div>
 
             {/* Links */}
@@ -48,7 +47,7 @@ export const Footer: React.FC = () => {
             <div>
               <h4 className="text-[10px] font-mono font-bold uppercase tracking-widest text-white-40 mb-3 sm:mb-4">INTEL</h4>
               <ul className="space-y-2 sm:space-y-3">
-                <li><a href="https://x.com/Blacklistsolana" target="_blank" rel="noopener noreferrer" className="text-xs font-mono text-white-60 hover:text-white transition-colors">X / Twitter</a></li>
+                {/* Reserved for future intel links */}
               </ul>
             </div>
           </div>

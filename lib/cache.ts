@@ -8,7 +8,7 @@
  * In production, replace in-memory cache with Redis for horizontal scaling.
  */
 
-import { pool } from './db';
+import { dbQuery } from './db';
 
 // TTL constants by data type
 export const CACHE_TTL = {
@@ -189,7 +189,7 @@ export async function getCachedWalletScan(
   walletAddress: string
 ): Promise<CachedWalletScan | null> {
   try {
-        const result = await pool.query(
+    const result = await dbQuery(
       `SELECT * FROM dk_wallet_scan_cache
        WHERE wallet_address = $1
        AND cached_at > NOW() - INTERVAL '1 hour'`,
@@ -225,7 +225,7 @@ export async function setCachedWalletScan(
   scan: Omit<CachedWalletScan, 'walletAddress' | 'cachedAt'>
 ): Promise<void> {
   try {
-        await pool.query(
+    await dbQuery(
       `INSERT INTO dk_wallet_scan_cache
        (wallet_address, total_score, tier, token_count, migration_count, rug_count, tokens_data, cached_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
@@ -258,9 +258,9 @@ export async function setCachedWalletScan(
  */
 export async function invalidateWalletCache(walletAddress: string): Promise<void> {
   try {
-        await Promise.all([
-      pool.query('DELETE FROM dk_wallet_tokens_cache WHERE wallet_address = $1', [walletAddress]),
-      pool.query('DELETE FROM dk_wallet_scan_cache WHERE wallet_address = $1', [walletAddress]),
+    await Promise.all([
+      dbQuery('DELETE FROM dk_wallet_tokens_cache WHERE wallet_address = $1', [walletAddress]),
+      dbQuery('DELETE FROM dk_wallet_scan_cache WHERE wallet_address = $1', [walletAddress]),
     ]);
   } catch (error) {
     console.error('Error invalidating wallet cache:', error);

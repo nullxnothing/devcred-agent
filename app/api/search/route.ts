@@ -1,12 +1,18 @@
 import { NextRequest } from 'next/server';
 import { searchUsers, getWalletByAddress, getTokenByMint } from '@/lib/db';
 import { PublicKey } from '@solana/web3.js';
-import { apiOk, apiBadRequest, apiError, withCache } from '@/lib/api-response';
+import { apiOk, apiBadRequest, withCache } from '@/lib/api-response';
+
+const EMPTY_RESULTS = {
+  users: [],
+  wallet: null,
+  token: null,
+};
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const query = searchParams.get('q');
+    const query = searchParams.get('q')?.trim().replace(/^@/, '');
 
     if (!query || query.length < 2) {
       return apiBadRequest('Query must be at least 2 characters');
@@ -50,7 +56,11 @@ export async function GET(request: NextRequest) {
 
     if (isValidAddress) {
       // Search for wallet
-      const wallet = await getWalletByAddress(query);
+      const [wallet, token] = await Promise.all([
+        getWalletByAddress(query),
+        getTokenByMint(query),
+      ]);
+
       if (wallet) {
         results.wallet = {
           address: wallet.address,
@@ -67,7 +77,6 @@ export async function GET(request: NextRequest) {
       }
 
       // Search for token by mint
-      const token = await getTokenByMint(query);
       if (token) {
         results.token = {
           mint: token.mint_address,
@@ -76,23 +85,23 @@ export async function GET(request: NextRequest) {
           creatorWallet: token.creator_wallet,
         };
       }
+    } else if (query.length >= 3) {
+      // Search users by handle/name. Avoid hammering the DB on very short typeahead queries.
+      const users = await searchUsers(query, 10);
+      results.users = users.map((u) => ({
+        id: u.id,
+        twitterHandle: u.twitter_handle,
+        twitterName: u.twitter_name,
+        avatarUrl: u.avatar_url,
+        score: u.total_score,
+        rank: u.rank,
+      }));
     }
-
-    // Search users by handle/name
-    const users = await searchUsers(query, 10);
-    results.users = users.map((u) => ({
-      id: u.id,
-      twitterHandle: u.twitter_handle,
-      twitterName: u.twitter_name,
-      avatarUrl: u.avatar_url,
-      score: u.total_score,
-      rank: u.rank,
-    }));
 
     // Cache search results for 30 seconds, stale for 60 more
     return withCache(apiOk(results), 30, 60);
   } catch (error) {
     console.error('Error searching:', error);
-    return apiError(error);
+    return withCache(apiOk(EMPTY_RESULTS), 5, 30);
   }
 }

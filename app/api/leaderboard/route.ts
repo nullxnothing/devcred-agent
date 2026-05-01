@@ -24,6 +24,18 @@ export async function GET(request: NextRequest) {
     );
   } catch (error) {
     console.error('Error fetching leaderboard:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json(
+      {
+        leaderboard: [],
+        total: 0,
+        updatedAt: new Date().toISOString(),
+        degraded: true,
+      },
+      {
+        headers: {
+          'Cache-Control': 'public, s-maxage=5, stale-while-revalidate=30',
+        },
+      }
+    );
   }
 }

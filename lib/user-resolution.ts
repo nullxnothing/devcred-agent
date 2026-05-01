@@ -10,7 +10,7 @@ export async function resolveUserFromHandle(handle: string): Promise<User | null
   const cleanHandle = cleanTwitterHandle(handle);
 
   // Try Twitter handle first
-  let user = await getUserByTwitterHandle(cleanHandle);
+  const user = await getUserByTwitterHandle(cleanHandle);
   if (user) return user;
 
   // Check if it's a valid Solana address

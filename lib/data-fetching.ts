@@ -1,6 +1,5 @@
-import { getLeaderboard as dbGetLeaderboard, getUserByTwitterHandle, getOrCreateSystemUser, getWalletsByUserId, getTokensForUserWallets, updateUser, addScoreHistory, recordProfileView, upsertToken, updateUserRank, getKolByUserId, getKolStatusForUsers, getKolsWithUsers, getAllKols } from './db';
+import { getLeaderboard as dbGetLeaderboard, getUserByTwitterHandle, getUserByAnyWallet, getOrCreateSystemUser, getWalletsByUserId, getTokensForUserWallets, updateUser, addScoreHistory, recordProfileView, upsertToken, updateUserRank, getKolByUserId, getKolStatusForUsers, getKolsWithUsers } from './db';
 import { getTierInfo, DevTier, calculateDevScore, calculateTokenScoresBatch, TokenScoreInput, determineTier } from './scoring';
-import type { Kol } from '@/types/database';
 import { getMultipleTokensMarketData } from './dexscreener';
 import { detectRugPattern, getMigratedTokensFromSwapHistory, batchGetHolderCountsQuick } from './helius';
 import { getCachedHolderCount, setCachedHolderCount, invalidateWalletCache as invalidateDbWalletCache } from './cache';
@@ -18,24 +17,29 @@ import {
   safeRugDetection,
   TokenDisplayData,
 } from './profile-service';
-import { DEX_CONFIG } from './constants';
 import { User, Token } from '@/types/database';
 
 // ==================== USER RESOLUTION ====================
 
 /** Resolve user from Twitter handle or wallet address */
-async function resolveUserFromHandle(handle: string): Promise<User | null> {
+async function resolveUserFromHandle(
+  handle: string,
+  options: { createIfWallet?: boolean } = {}
+): Promise<User | null> {
+  const { createIfWallet = true } = options;
   const cleanHandle = cleanTwitterHandle(handle);
 
   // Try Twitter handle first
-  let user = await getUserByTwitterHandle(cleanHandle);
+  const user = await getUserByTwitterHandle(cleanHandle);
   if (user) return user;
 
   // Check if it's a valid Solana address
   try {
     new PublicKey(cleanHandle);
     if (isValidSolanaAddress(cleanHandle)) {
-      return await getOrCreateSystemUser(cleanHandle);
+      return createIfWallet
+        ? await getOrCreateSystemUser(cleanHandle)
+        : await getUserByAnyWallet(cleanHandle);
     }
   } catch {
     // Not a valid address
@@ -637,12 +641,17 @@ export interface ProfileTokensData {
 }
 
 /** Fetch tokens with enrichment - slower, for streaming */
-export async function getProfileTokens(userId: string, wallets: Array<{ address: string }>): Promise<ProfileTokensData> {
+export async function getProfileTokens(
+  userId: string,
+  wallets: Array<{ address: string }>,
+  options: { scanIfEmpty?: boolean } = {}
+): Promise<ProfileTokensData> {
   try {
+    const { scanIfEmpty = true } = options;
     let tokens = await getTokensForUserWallets(userId);
 
     // Scan for new tokens if none exist
-    if (tokens.length === 0 && wallets.length > 0) {
+    if (scanIfEmpty && tokens.length === 0 && wallets.length > 0) {
       const primaryWallet = wallets[0];
       tokens = await scanAndSaveTokens(primaryWallet.address, userId);
     }

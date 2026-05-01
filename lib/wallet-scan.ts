@@ -12,11 +12,9 @@ import {
   batchGetHolderCountsQuick,
   batchGetDevHoldings,
   detectRugPattern,
-  TokenCreated,
 } from './helius';
 import {
   batchGetTokenMarketData,
-  BatchTokenMarketData,
 } from './dexscreener';
 import {
   calculateTokenScore,
@@ -31,7 +29,6 @@ import {
 } from './cache';
 import {
   batchDetectMigrations,
-  MigrationResult,
 } from './migration-detection';
 import { DEX_CONFIG, MigrationDexType } from './constants';
 
@@ -70,6 +67,8 @@ export interface WalletScanResult {
 
 /** Max tokens to auto-scan. Set high to capture full dev history. */
 export const MAX_AUTO_SCAN_TOKENS = 500;
+export const PROFILE_AUTO_SCAN_MAX_TOKENS = 100;
+export const PROFILE_AUTO_SCAN_MAX_PAGES = 10;
 
 export interface ScanOptions {
   /** Skip rug detection for faster results (default: true for speed) */
@@ -120,14 +119,16 @@ export async function scanWallet(
           tokensLimited: cached.tokensLimited ?? false,
         };
       }
-    } catch (error) {
+    } catch {
       log('Cache check failed, proceeding with fresh scan');
     }
   }
 
   // ===== STEP 1: Detect tokens created by wallet =====
   log('Step 1: Detecting created tokens...');
-  const allCreatedTokens = await getTokensCreatedByWalletViaFeePayer(walletAddress);
+  const allCreatedTokens = await getTokensCreatedByWalletViaFeePayer(walletAddress, {
+    maxPages: options.maxPages ?? PROFILE_AUTO_SCAN_MAX_PAGES,
+  });
   const totalTokensFound = allCreatedTokens.length;
   log(`Found ${totalTokensFound} tokens`);
 
@@ -338,7 +339,7 @@ export async function scanWallet(
       totalTokensFound: result.totalTokensFound,
       tokensLimited: result.tokensLimited,
     });
-  } catch (error) {
+  } catch {
     log('Failed to cache scan result');
   }
 
@@ -350,9 +351,15 @@ export async function scanWallet(
  * This is now the DEFAULT behavior of scanWallet()
  */
 export async function scanWalletQuick(
-  walletAddress: string
+  walletAddress: string,
+  options: ScanOptions = {}
 ): Promise<WalletScanResult> {
-  return scanWallet(walletAddress, { skipRugDetection: true });
+  return scanWallet(walletAddress, {
+    maxPages: PROFILE_AUTO_SCAN_MAX_PAGES,
+    maxTokens: PROFILE_AUTO_SCAN_MAX_TOKENS,
+    ...options,
+    skipRugDetection: true,
+  });
 }
 
 /**

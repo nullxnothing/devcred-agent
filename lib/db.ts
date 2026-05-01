@@ -1,19 +1,108 @@
-import { Pool } from 'pg';
-import { User, Wallet, Token, ScoreHistory, ProfileView, NewUser, NewWallet, NewToken, Kol, NewKol } from '@/types/database';
+import { Pool, QueryResult } from 'pg';
+import { User, Wallet, Token, ScoreHistory, NewUser, NewWallet, NewToken, Kol, NewKol } from '@/types/database';
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  // Railway PostgreSQL uses self-signed certs, so we must allow them
-  // This is acceptable for Railway's internal network but not ideal
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-  max: 30, // Increased for parallel query patterns
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 5000,
-});
+declare global {
+  // Reuse the pool across hot reloads and warm serverless invocations.
+  var __devkarmaPgPool: Pool | undefined;
+}
+
+const DEFAULT_POOL_MAX = process.env.NODE_ENV === 'production' || process.env.VERCEL ? 1 : 10;
+const parsedPoolMax = Number.parseInt(process.env.POSTGRES_POOL_MAX || '', 10);
+const poolMax = Number.isFinite(parsedPoolMax) && parsedPoolMax > 0
+  ? parsedPoolMax
+  : DEFAULT_POOL_MAX;
+
+function normalizeDatabaseUrl(databaseUrl: string | undefined): {
+  connectionString: string | undefined;
+  hasSslMode: boolean;
+} {
+  if (!databaseUrl) {
+    return { connectionString: databaseUrl, hasSslMode: false };
+  }
+
+  try {
+    const url = new URL(databaseUrl);
+    if (url.searchParams.get('sslmode') === 'require') {
+      url.searchParams.set('sslmode', 'verify-full');
+    }
+    return {
+      connectionString: url.toString(),
+      hasSslMode: url.searchParams.has('sslmode'),
+    };
+  } catch {
+    return { connectionString: databaseUrl, hasSslMode: false };
+  }
+}
+
+function createPool(): Pool {
+  if (!process.env.DATABASE_URL) {
+    console.warn('DATABASE_URL is not set; database requests will fail.');
+  }
+
+  const { connectionString, hasSslMode } = normalizeDatabaseUrl(process.env.DATABASE_URL);
+
+  return new Pool({
+    connectionString,
+    ssl: hasSslMode ? undefined : process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+    max: poolMax,
+    idleTimeoutMillis: 10000,
+    connectionTimeoutMillis: 10000,
+    allowExitOnIdle: true,
+  });
+}
+
+const pool = globalThis.__devkarmaPgPool ?? createPool();
+globalThis.__devkarmaPgPool = pool;
 
 pool.on('error', (err) => {
   console.error('Unexpected database pool error:', err);
 });
+
+function isTransientDatabaseError(error: unknown): boolean {
+  const err = error as { code?: unknown; message?: unknown };
+  const code = typeof err.code === 'string' ? err.code : '';
+  const message = typeof err.message === 'string' ? err.message : '';
+
+  return [
+    'ECONNRESET',
+    'ETIMEDOUT',
+    'EPIPE',
+    '57P01',
+    '57P02',
+    '57P03',
+    '08003',
+    '08006',
+  ].includes(code) ||
+    message.includes('Connection terminated unexpectedly') ||
+    message.includes('read ECONNRESET');
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+export async function dbQuery(text: string, params?: unknown[]): Promise<QueryResult> {
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      return await pool.query(text, params);
+    } catch (error) {
+      lastError = error;
+      if (attempt < 2 && isTransientDatabaseError(error)) {
+        console.warn('Transient database error; retrying query.', {
+          code: (error as { code?: unknown }).code,
+          attempt: attempt + 1,
+        });
+        await sleep(150 * (attempt + 1));
+        continue;
+      }
+      throw error;
+    }
+  }
+
+  throw lastError;
+}
 
 let isShuttingDown = false;
 
@@ -21,7 +110,7 @@ export async function healthCheck(): Promise<boolean> {
   if (isShuttingDown) return false;
 
   try {
-    const result = await pool.query('SELECT 1 as health');
+    const result = await dbQuery('SELECT 1 as health');
     return result.rows[0]?.health === 1;
   } catch {
     return false;
@@ -42,14 +131,14 @@ export async function gracefulShutdown(): Promise<void> {
   }
 }
 
-if (typeof process !== 'undefined') {
+if (typeof process !== 'undefined' && !process.env.VERCEL) {
   process.on('SIGTERM', gracefulShutdown);
   process.on('SIGINT', gracefulShutdown);
 }
 
 // Users
 export async function getUserByTwitterHandle(handle: string): Promise<User | null> {
-  const result = await pool.query(
+  const result = await dbQuery(
     'SELECT * FROM dk_users WHERE LOWER(twitter_handle) = LOWER($1)',
     [handle]
   );
@@ -57,12 +146,12 @@ export async function getUserByTwitterHandle(handle: string): Promise<User | nul
 }
 
 export async function getUserById(id: string): Promise<User | null> {
-  const result = await pool.query('SELECT * FROM dk_users WHERE id = $1', [id]);
+  const result = await dbQuery('SELECT * FROM dk_users WHERE id = $1', [id]);
   return result.rows[0] || null;
 }
 
 export async function getUserByTwitterId(twitterId: string): Promise<User | null> {
-  const result = await pool.query(
+  const result = await dbQuery(
     'SELECT * FROM dk_users WHERE twitter_id = $1',
     [twitterId]
   );
@@ -70,7 +159,7 @@ export async function getUserByTwitterId(twitterId: string): Promise<User | null
 }
 
 export async function createUser(user: NewUser): Promise<User> {
-  const result = await pool.query(
+  const result = await dbQuery(
     `INSERT INTO dk_users (twitter_id, twitter_handle, twitter_name, avatar_url, bio, is_verified, primary_wallet)
      VALUES ($1, $2, $3, $4, $5, $6, $7)
      RETURNING *`,
@@ -91,7 +180,7 @@ export async function createUser(user: NewUser): Promise<User> {
  * Get user by their primary wallet address (wallet-first auth)
  */
 export async function getUserByWallet(walletAddress: string): Promise<User | null> {
-  const result = await pool.query(
+  const result = await dbQuery(
     'SELECT * FROM dk_users WHERE primary_wallet = $1',
     [walletAddress]
   );
@@ -103,7 +192,7 @@ export async function getUserByWallet(walletAddress: string): Promise<User | nul
  * Single query with JOIN - replaces 3 sequential queries
  */
 export async function getUserByAnyWallet(walletAddress: string): Promise<User | null> {
-  const result = await pool.query(
+  const result = await dbQuery(
     `SELECT u.* FROM dk_users u
      LEFT JOIN dk_wallets w ON u.id = w.user_id
      WHERE u.primary_wallet = $1 OR w.address = $1
@@ -117,7 +206,7 @@ export async function getUserByAnyWallet(walletAddress: string): Promise<User | 
  * Get user by their pump.fun username
  */
 export async function getUserByPumpFunUsername(username: string): Promise<User | null> {
-  const result = await pool.query(
+  const result = await dbQuery(
     'SELECT * FROM dk_users WHERE pumpfun_username = $1',
     [username]
   );
@@ -178,7 +267,7 @@ export async function linkTwitterToUser(
   twitterName: string, 
   avatarUrl?: string
 ): Promise<User | null> {
-  const result = await pool.query(
+  const result = await dbQuery(
     `UPDATE dk_users 
      SET twitter_id = $1, twitter_handle = $2, twitter_name = $3, avatar_url = COALESCE($4, avatar_url), updated_at = NOW()
      WHERE id = $5
@@ -192,7 +281,7 @@ export async function linkTwitterToUser(
  * Unlink Twitter account from user
  */
 export async function unlinkTwitterFromUser(userId: string): Promise<User | null> {
-  const result = await pool.query(
+  const result = await dbQuery(
     `UPDATE dk_users 
      SET twitter_id = NULL, twitter_handle = NULL, updated_at = NOW()
      WHERE id = $1
@@ -247,7 +336,7 @@ export async function updateUser(id: string, updates: Partial<User>): Promise<Us
   if (fields.length === 0) return getUserById(id);
 
   values.push(id);
-  const result = await pool.query(
+  const result = await dbQuery(
     `UPDATE dk_users SET ${fields.join(', ')}, updated_at = NOW() WHERE id = $${paramIndex} RETURNING *`,
     values
   );
@@ -256,7 +345,7 @@ export async function updateUser(id: string, updates: Partial<User>): Promise<Us
 
 // Wallets
 export async function getWalletsByUserId(userId: string): Promise<Wallet[]> {
-  const result = await pool.query(
+  const result = await dbQuery(
     'SELECT * FROM dk_wallets WHERE user_id = $1 ORDER BY is_primary DESC, created_at ASC',
     [userId]
   );
@@ -264,12 +353,12 @@ export async function getWalletsByUserId(userId: string): Promise<Wallet[]> {
 }
 
 export async function getWalletByAddress(address: string): Promise<Wallet | null> {
-  const result = await pool.query('SELECT * FROM dk_wallets WHERE address = $1', [address]);
+  const result = await dbQuery('SELECT * FROM dk_wallets WHERE address = $1', [address]);
   return result.rows[0] || null;
 }
 
 export async function createWallet(wallet: NewWallet): Promise<Wallet> {
-  const result = await pool.query(
+  const result = await dbQuery(
     `INSERT INTO dk_wallets (user_id, address, label, is_primary, verified_at)
      VALUES ($1, $2, $3, $4, NOW())
      RETURNING *`,
@@ -279,7 +368,7 @@ export async function createWallet(wallet: NewWallet): Promise<Wallet> {
 }
 
 export async function deleteWallet(id: string, userId: string): Promise<boolean> {
-  const result = await pool.query(
+  const result = await dbQuery(
     'DELETE FROM dk_wallets WHERE id = $1 AND user_id = $2',
     [id, userId]
   );
@@ -287,7 +376,7 @@ export async function deleteWallet(id: string, userId: string): Promise<boolean>
 }
 
 export async function deleteWalletByAddress(address: string, userId: string): Promise<boolean> {
-  const result = await pool.query(
+  const result = await dbQuery(
     'DELETE FROM dk_wallets WHERE address = $1 AND user_id = $2',
     [address, userId]
   );
@@ -318,7 +407,7 @@ export async function setWalletPrimary(id: string, userId: string): Promise<bool
 
 // Tokens
 export async function getTokensByCreatorWallet(walletAddress: string): Promise<Token[]> {
-  const result = await pool.query(
+  const result = await dbQuery(
     'SELECT * FROM dk_tokens WHERE creator_wallet = $1 ORDER BY launch_date DESC',
     [walletAddress]
   );
@@ -326,7 +415,7 @@ export async function getTokensByCreatorWallet(walletAddress: string): Promise<T
 }
 
 export async function getTokensByUserId(userId: string): Promise<Token[]> {
-  const result = await pool.query(
+  const result = await dbQuery(
     'SELECT * FROM dk_tokens WHERE user_id = $1 ORDER BY launch_date DESC',
     [userId]
   );
@@ -334,7 +423,7 @@ export async function getTokensByUserId(userId: string): Promise<Token[]> {
 }
 
 export async function getTokenByMint(mintAddress: string): Promise<Token | null> {
-  const result = await pool.query(
+  const result = await dbQuery(
     'SELECT * FROM dk_tokens WHERE mint_address = $1',
     [mintAddress]
   );
@@ -342,7 +431,7 @@ export async function getTokenByMint(mintAddress: string): Promise<Token | null>
 }
 
 export async function upsertToken(token: NewToken): Promise<Token> {
-  const result = await pool.query(
+  const result = await dbQuery(
     `INSERT INTO dk_tokens (
        mint_address, name, symbol, creator_wallet, user_id, launch_date,
        migrated, migrated_at, ath_market_cap, current_market_cap, total_volume,
@@ -402,7 +491,7 @@ export async function upsertToken(token: NewToken): Promise<Token> {
 
 export async function getTokensForUserWallets(userId: string): Promise<Token[]> {
   // Use user_id directly (faster) with fallback to wallet join for legacy tokens
-  const result = await pool.query(
+  const result = await dbQuery(
     `SELECT DISTINCT t.* FROM dk_tokens t
      LEFT JOIN dk_wallets w ON t.creator_wallet = w.address AND w.user_id = $1
      WHERE t.user_id = $1 OR w.user_id = $1
@@ -414,7 +503,7 @@ export async function getTokensForUserWallets(userId: string): Promise<Token[]> 
 
 // Score History
 export async function getScoreHistory(userId: string, limit = 30): Promise<ScoreHistory[]> {
-  const result = await pool.query(
+  const result = await dbQuery(
     'SELECT * FROM dk_score_history WHERE user_id = $1 ORDER BY calculated_at DESC LIMIT $2',
     [userId, limit]
   );
@@ -426,7 +515,7 @@ export async function addScoreHistory(
   score: number,
   breakdown: Record<string, unknown>
 ): Promise<ScoreHistory> {
-  const result = await pool.query(
+  const result = await dbQuery(
     `INSERT INTO dk_score_history (user_id, score, score_breakdown)
      VALUES ($1, $2, $3)
      RETURNING *`,
@@ -441,7 +530,7 @@ export async function recordProfileView(
   viewerIp?: string,
   viewerUserId?: string
 ): Promise<void> {
-  await pool.query(
+  await dbQuery(
     `INSERT INTO dk_profile_views (user_id, viewer_ip, viewer_user_id)
      VALUES ($1, $2, $3)`,
     [userId, viewerIp, viewerUserId]
@@ -449,7 +538,7 @@ export async function recordProfileView(
 }
 
 export async function getProfileViewCount(userId: string, days = 30): Promise<number> {
-  const result = await pool.query(
+  const result = await dbQuery(
     `SELECT COUNT(*) as count FROM dk_profile_views
      WHERE user_id = $1 AND viewed_at > NOW() - INTERVAL '1 day' * $2`,
     [userId, days]
@@ -459,7 +548,7 @@ export async function getProfileViewCount(userId: string, days = 30): Promise<nu
 
 // Leaderboard - shows all users that have been scanned (have wallets)
 export async function getLeaderboard(limit = 100): Promise<User[]> {
-  const result = await pool.query(
+  const result = await dbQuery(
     `SELECT DISTINCT u.* FROM dk_users u
      INNER JOIN dk_wallets w ON u.id = w.user_id
      ORDER BY u.total_score DESC, u.created_at ASC
@@ -471,7 +560,7 @@ export async function getLeaderboard(limit = 100): Promise<User[]> {
 
 // Update ranks for all users with wallets
 export async function updateRanks(): Promise<void> {
-  await pool.query(`
+  await dbQuery(`
     WITH ranked AS (
       SELECT DISTINCT u.id,
              ROW_NUMBER() OVER (ORDER BY u.total_score DESC, u.created_at ASC) as new_rank
@@ -487,7 +576,7 @@ export async function updateRanks(): Promise<void> {
 
 // Update a single user's rank based on how many users score higher
 export async function updateUserRank(userId: string): Promise<number | null> {
-  const result = await pool.query(`
+  const result = await dbQuery(`
     UPDATE dk_users
     SET rank = (
       SELECT COUNT(DISTINCT u2.id) + 1
@@ -506,7 +595,7 @@ export async function updateUserRank(userId: string): Promise<number | null> {
 export async function searchUsers(query: string, limit = 10): Promise<User[]> {
   // Escape ILIKE metacharacters to prevent pattern injection
   const escapedQuery = query.replace(/[%_\\]/g, '\\$&');
-  const result = await pool.query(
+  const result = await dbQuery(
     `SELECT * FROM dk_users
      WHERE twitter_handle ILIKE $1 OR twitter_name ILIKE $1
      ORDER BY total_score DESC
@@ -533,7 +622,7 @@ export async function upsertUserByWallet(walletAddress: string, data: ScrapedUse
 
   if (existing) {
     // Update existing user with all scraped fields
-    const result = await pool.query(
+    const result = await dbQuery(
       `UPDATE dk_users
        SET total_score = $1, tier = $2, scraped_at = $3,
            token_count = COALESCE($5, token_count),
@@ -607,7 +696,7 @@ export async function upsertUserByWallet(walletAddress: string, data: ScrapedUse
 
 // KOLs (Key Opinion Leaders)
 export async function getKolByWallet(walletAddress: string): Promise<Kol | null> {
-  const result = await pool.query(
+  const result = await dbQuery(
     'SELECT * FROM dk_kols WHERE wallet_address = $1',
     [walletAddress]
   );
@@ -615,7 +704,7 @@ export async function getKolByWallet(walletAddress: string): Promise<Kol | null>
 }
 
 export async function getKolByUserId(userId: string): Promise<Kol | null> {
-  const result = await pool.query(
+  const result = await dbQuery(
     'SELECT * FROM dk_kols WHERE user_id = $1',
     [userId]
   );
@@ -623,7 +712,7 @@ export async function getKolByUserId(userId: string): Promise<Kol | null> {
 }
 
 export async function getAllKols(limit = 100): Promise<Kol[]> {
-  const result = await pool.query(
+  const result = await dbQuery(
     `SELECT * FROM dk_kols
      ORDER BY kolscan_rank ASC NULLS LAST, pnl_sol DESC NULLS LAST
      LIMIT $1`,
@@ -643,7 +732,7 @@ export interface KolWithUser extends Kol {
 }
 
 export async function getKolsWithUsers(limit = 100): Promise<KolWithUser[]> {
-  const result = await pool.query(
+  const result = await dbQuery(
     `SELECT k.*,
             u.total_score as user_total_score,
             u.twitter_handle as user_twitter_handle,
@@ -662,7 +751,7 @@ export async function getKolsWithUsers(limit = 100): Promise<KolWithUser[]> {
 }
 
 export async function upsertKol(kol: NewKol): Promise<Kol> {
-  const result = await pool.query(
+  const result = await dbQuery(
     `INSERT INTO dk_kols (
        wallet_address, name, twitter_url, telegram_url,
        kolscan_rank, pnl_sol, wins, losses, user_id
@@ -694,7 +783,7 @@ export async function upsertKol(kol: NewKol): Promise<Kol> {
 }
 
 export async function linkKolToUser(walletAddress: string, userId: string): Promise<boolean> {
-  const result = await pool.query(
+  const result = await dbQuery(
     `UPDATE dk_kols SET user_id = $1, updated_at = NOW()
      WHERE wallet_address = $2`,
     [userId, walletAddress]
@@ -703,12 +792,12 @@ export async function linkKolToUser(walletAddress: string, userId: string): Prom
 }
 
 export async function getKolCount(): Promise<number> {
-  const result = await pool.query('SELECT COUNT(*) as count FROM dk_kols');
+  const result = await dbQuery('SELECT COUNT(*) as count FROM dk_kols');
   return parseInt(result.rows[0].count, 10);
 }
 
 export async function isUserKol(userId: string): Promise<boolean> {
-  const result = await pool.query(
+  const result = await dbQuery(
     'SELECT 1 FROM dk_kols WHERE user_id = $1 LIMIT 1',
     [userId]
   );
@@ -718,7 +807,7 @@ export async function isUserKol(userId: string): Promise<boolean> {
 export async function getKolStatusForUsers(userIds: string[]): Promise<Map<string, boolean>> {
   if (userIds.length === 0) return new Map();
 
-  const result = await pool.query(
+  const result = await dbQuery(
     `SELECT user_id FROM dk_kols WHERE user_id = ANY($1)`,
     [userIds]
   );

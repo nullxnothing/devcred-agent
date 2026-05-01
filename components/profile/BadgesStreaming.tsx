@@ -7,7 +7,7 @@ interface BadgesStreamingProps {
 }
 
 export async function BadgesStreaming({ userId, wallets }: BadgesStreamingProps) {
-  const { badges } = await getProfileTokens(userId, wallets);
+  const { badges } = await getProfileTokens(userId, wallets, { scanIfEmpty: false });
 
   if (badges.length === 0) {
     return null;
